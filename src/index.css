@@ -1,0 +1,136 @@
+@import url('https://fonts.googleapis.com/css2?family=Days+One&family=Yanone+Kaffeesatz:wght@300;400;500;600;700&display=swap');
+@import 'tailwindcss';
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-border: var(--border);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: var(--radius);
+  --radius-lg: calc(var(--radius) + 4px);
+  --radius-xl: calc(var(--radius) + 8px);
+}
+
+:root {
+  --background: #d6e8f6;
+  --foreground: #3f6886;
+  --card: #ffffff;
+  --card-foreground: #3f6886;
+  --primary: #e92423;
+  --primary-foreground: #ffffff;
+  --secondary: #3f6886;
+  --secondary-foreground: #ffffff;
+  --muted: #edf6fc;
+  --muted-foreground: #587990;
+  --accent: #3f6886;
+  --accent-foreground: #ffffff;
+  --border: #bed5e6;
+  --ring: #e92423;
+  --brand: #3f6886;
+  --brand-dark: #28475d;
+  --nav-active: #e8f3fa;
+  --app-surface: #f8fbfd;
+  --shadow-app: 0 16px 48px rgba(40, 71, 93, 0.12);
+  --shadow-card: 0 1px 2px rgba(40, 71, 93, 0.04);
+  --radius: 8px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Yanone Kaffeesatz', sans-serif;
+  font-size: 16px;
+  letter-spacing: 0;
+  background-color: var(--background);
+  color: var(--foreground);
+  margin: 0;
+  padding: 0;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--ring) 28%, transparent);
+  outline-offset: 2px;
+}
+
+.app-main {
+  background:
+    radial-gradient(circle at 100% 0%, rgba(214, 232, 246, 0.75), transparent 34rem),
+    var(--app-surface);
+}
+
+.app-main > div:not(.flex) {
+  max-width: 80rem;
+  margin-inline: auto;
+}
+
+.app-main .rounded-2xl,
+.app-main .rounded-xl {
+  border-radius: var(--radius);
+}
+
+.app-main input,
+.app-main textarea,
+.app-main select {
+  background: var(--card) !important;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Yanone Kaffeesatz', sans-serif;
+  letter-spacing: 0;
+  font-weight: 600;
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 99px;
+}
+
+@keyframes pulse-ring {
+  0% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(1.6); opacity: 0; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slide-up {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in { animation: fade-in 0.35s ease both; }
+.animate-slide-up { animation: slide-up 0.4s ease both; }
+.animate-spin-slow { animation: spin-slow 1.8s linear infinite; }
