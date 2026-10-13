@@ -28,7 +28,7 @@ export default function ProfileScreen({ user }: { user: { name: string; email: s
           {user.name.slice(0, 1)}
         </div>
         <div>
-          <h2 className="text-xl font-semibold" style={{ color: 'var(--brand-dark)' }}>{user.name}</h2>
+          <h2 className="text-2xl font-semibold" style={{ color: 'var(--brand-dark)' }}>{user.name}</h2>
           <p className="text-sm mt-1" style={{ color: 'var(--muted-foreground)' }}>{user.email}</p>
           <span className="text-xs font-medium mt-2 inline-block" style={{ color: 'var(--brand)' }}>
             Conta verificada
@@ -90,7 +90,7 @@ export default function ProfileScreen({ user }: { user: { name: string; email: s
 
       {tab === 'security' && (
         <div className="rounded-lg p-6 space-y-5" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
-          <h3 className="font-semibold" style={{ color: 'var(--brand-dark)' }}>Alterar senha</h3>
+          <h3 className="text-xl font-semibold" style={{ color: 'var(--brand-dark)' }}>Alterar senha</h3>
           {['Senha atual', 'Nova senha', 'Confirmar nova senha'].map(label => (
             <div key={label} className="space-y-1.5">
               <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>{label}</label>
@@ -112,7 +112,7 @@ export default function ProfileScreen({ user }: { user: { name: string; email: s
           </button>
 
           <div className="border-t pt-5" style={{ borderColor: 'var(--border)' }}>
-            <h3 className="font-semibold mb-4" style={{ color: 'var(--brand-dark)' }}>Autenticação de dois fatores</h3>
+            <h3 className="text-xl font-semibold mb-4" style={{ color: 'var(--brand-dark)' }}>Autenticação de dois fatores</h3>
             <div className="flex items-center justify-between p-4 rounded-xl" style={{ background: 'var(--muted)' }}>
               <div>
                 <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>2FA por SMS</p>
@@ -126,7 +126,7 @@ export default function ProfileScreen({ user }: { user: { name: string; email: s
 
       {tab === 'notifications' && (
         <div className="rounded-lg p-6 space-y-4" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
-          <h3 className="font-semibold mb-2" style={{ color: 'var(--brand-dark)' }}>Preferências de notificação</h3>
+          <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--brand-dark)' }}>Preferências de notificação</h3>
           {[
             { key: 'meds' as const, label: 'Lembretes de medicamentos', desc: 'Alertas para tomar remédios no horário' },
             { key: 'appointments' as const, label: 'Consultas e vacinas', desc: 'Lembretes antes de consultas agendadas' },
