@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import UiIcon from '../components/UiIcon';
+import Icon from '../components/Icon';
 
 const dependents = [
   {
@@ -48,7 +48,7 @@ export default function DependentsScreen() {
               {dep.avatar}
             </div>
             <div>
-              <h2 className="text-xl font-semibold" style={{ color: 'var(--brand-dark)' }}>{dep.name}</h2>
+              <h2 className="text-2xl font-semibold" style={{ color: 'var(--brand-dark)' }}>{dep.name}</h2>
               <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>{dep.relation} · {dep.age}</p>
             </div>
           </div>
@@ -79,7 +79,7 @@ export default function DependentsScreen() {
             <div>
               <p className="text-xs font-medium uppercase tracking-wide mb-2" style={{ color: 'var(--muted-foreground)' }}>Próximo lembrete</p>
               <div className="flex items-center gap-3 p-3 rounded-lg" style={{ background: 'var(--muted)', border: '1px solid var(--border)' }}>
-                <UiIcon name="reminder" className="w-4 h-4" />
+                <Icon name="reminder" className="w-4 h-4" />
                 <p className="text-sm font-medium" style={{ color: 'var(--foreground)' }}>{dep.nextReminder}</p>
               </div>
             </div>

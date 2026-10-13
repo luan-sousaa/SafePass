@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Screen } from '../App';
-import UiIcon from '../components/UiIcon';
+import type { Screen } from '../types';
+import Icon from '../components/Icon';
 
 const allDocs = [
   { type: 'Receita', name: 'Omeprazol 20mg', date: '18 set 2026', doctor: 'Dr. Carlos Lima' },
@@ -75,7 +75,7 @@ export default function DocumentsScreen({ navigate }: { navigate: (s: Screen) =>
             style={{ borderColor: 'var(--border)' }}
           >
             <div className="w-9 h-9 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-              <UiIcon name="document" className="w-4 h-4" />
+              <Icon name="document" className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
@@ -91,7 +91,7 @@ export default function DocumentsScreen({ navigate }: { navigate: (s: Screen) =>
 
         {filtered.length === 0 && (
           <div className="text-center py-16" style={{ color: 'var(--muted-foreground)' }}>
-            <UiIcon name="search" className="w-8 h-8 mx-auto mb-3" />
+            <Icon name="search" className="w-8 h-8 mx-auto mb-3" />
             <p className="text-sm font-medium">Nenhum documento encontrado</p>
             <p className="text-xs mt-1">Tente outros termos ou filtros</p>
           </div>

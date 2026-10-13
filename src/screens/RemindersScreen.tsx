@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import UiIcon from '../components/UiIcon';
+import Icon from '../components/Icon';
 
 const reminders = [
   { time: '08:00', label: 'Omeprazol 20mg', type: 'Medicamento', days: 'Diário', color: '#0d9488', active: true },
@@ -37,7 +37,7 @@ export default function RemindersScreen() {
             }}
           >
             <div className="w-9 h-9 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-              <UiIcon name="reminder" className="w-4 h-4" />
+              <Icon name="reminder" className="w-4 h-4" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-semibold" style={{ color: 'var(--foreground)' }}>{r.label}</p>

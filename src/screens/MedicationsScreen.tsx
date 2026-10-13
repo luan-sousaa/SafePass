@@ -1,4 +1,4 @@
-import UiIcon from '../components/UiIcon';
+import Icon from '../components/Icon';
 
 const meds = [
   { name: 'Omeprazol 20mg', dose: '20 mg', freq: '1x ao dia', period: '30 dias', next: 'Hoje, 08:00', status: 'ativo' },
@@ -30,7 +30,7 @@ export default function MedicationsScreen() {
           >
             <div className="flex items-start gap-4">
               <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-                <UiIcon name="medication" className="w-5 h-5" />
+                <Icon name="medication" className="w-5 h-5" />
               </div>
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2 mb-1">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import type { Screen } from '../App';
-import UiIcon from '../components/UiIcon';
+import type { Screen } from '../types';
+import Icon from '../components/Icon';
 
 type Step = 'choose' | 'analyzing' | 'review' | 'error' | 'manual';
 
@@ -31,9 +31,9 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
         <div className="rounded-lg p-8 text-center space-y-6" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
           <div>
             <div className="w-12 h-12 rounded-md flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-              <UiIcon name="document" className="w-5 h-5" />
+              <Icon name="document" className="w-5 h-5" />
             </div>
-            <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--brand-dark)' }}>
+            <h2 className="text-2xl font-semibold mb-2" style={{ color: 'var(--brand-dark)' }}>
               Adicionar documento
             </h2>
             <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
@@ -50,7 +50,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
             >
               <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-                <UiIcon name="camera" className="w-5 h-5" />
+                <Icon name="camera" className="w-5 h-5" />
               </div>
               <div>
                 <p className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>Tirar foto</p>
@@ -66,7 +66,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
             >
               <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-                <UiIcon name="folder" className="w-5 h-5" />
+                <Icon name="folder" className="w-5 h-5" />
               </div>
               <div>
                 <p className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>Enviar arquivo</p>
@@ -82,7 +82,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
               onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
             >
               <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-                <UiIcon name="edit" className="w-5 h-5" />
+                <Icon name="edit" className="w-5 h-5" />
               </div>
               <div>
                 <p className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>Preencher manualmente</p>
@@ -114,11 +114,11 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
               style={{ border: '3px solid transparent', borderTopColor: 'var(--primary)', borderRightColor: 'var(--primary)' }}
             />
             <div className="absolute inset-0 flex items-center justify-center" style={{ color: 'var(--brand)' }}>
-              <UiIcon name="search" className="w-5 h-5" />
+              <Icon name="search" className="w-5 h-5" />
             </div>
           </div>
           <div>
-            <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--brand-dark)' }}>
+            <h2 className="text-2xl font-semibold mb-2" style={{ color: 'var(--brand-dark)' }}>
               Analisando seu documento...
             </h2>
             <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
@@ -145,10 +145,10 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
       <div className="max-w-md mx-auto animate-slide-up">
         <div className="rounded-lg p-8 text-center space-y-6" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
           <div className="w-12 h-12 rounded-md flex items-center justify-center mx-auto" style={{ background: '#fef2f2', color: '#b91c1c' }}>
-            <UiIcon name="alert" className="w-5 h-5" />
+            <Icon name="alert" className="w-5 h-5" />
           </div>
           <div>
-            <h2 className="text-xl font-semibold mb-2" style={{ color: 'var(--brand-dark)' }}>
+            <h2 className="text-2xl font-semibold mb-2" style={{ color: 'var(--brand-dark)' }}>
               Não foi possível identificar as informações
             </h2>
             <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
@@ -181,7 +181,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
       <div className="max-w-lg mx-auto animate-slide-up space-y-5">
         {hasWarning && step === 'review' && (
           <div className="flex items-start gap-3 p-4 rounded-lg" style={{ background: '#fffbeb', border: '1px solid #fbbf24' }}>
-            <UiIcon name="alert" className="w-5 h-5 shrink-0" />
+            <Icon name="alert" className="w-5 h-5 shrink-0" />
             <div>
               <p className="text-sm font-semibold" style={{ color: '#92400e' }}>Algumas informações precisam ser confirmadas</p>
               <p className="text-xs mt-1" style={{ color: '#b45309' }}>Revise os campos destacados antes de salvar.</p>
@@ -191,13 +191,13 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
 
         {step === 'review' && (
           <div className="flex items-center gap-2 p-4 rounded-lg" style={{ background: '#f0fdf4', border: '1px solid #86efac' }}>
-            <UiIcon name="check" className="w-5 h-5 shrink-0" />
+            <Icon name="check" className="w-5 h-5 shrink-0" />
             <p className="text-sm font-medium" style={{ color: '#166534' }}>Documento analisado com sucesso</p>
           </div>
         )}
 
         <div className="rounded-lg p-6 space-y-5" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
-          <h2 className="text-lg font-semibold" style={{ color: 'var(--brand-dark)' }}>
+          <h2 className="text-2xl font-semibold" style={{ color: 'var(--brand-dark)' }}>
             {step === 'review' ? 'Revisar informações' : 'Preencher manualmente'}
           </h2>
 

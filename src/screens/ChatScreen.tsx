@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import UiIcon, { type UiIconName } from '../components/UiIcon';
+import Icon, { type IconName } from '../components/Icon';
 
 type Role = 'user' | 'agent';
 
@@ -102,7 +102,7 @@ export default function ChatScreen() {
               className="w-9 h-9 rounded-md flex items-center justify-center"
               style={{ background: 'var(--muted)', color: 'var(--brand)' }}
             >
-              <UiIcon name="assistant" className="w-4 h-4" />
+              <Icon name="assistant" className="w-4 h-4" />
             </div>
             <span
               className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full border-2"
@@ -138,7 +138,7 @@ export default function ChatScreen() {
                   className="w-7 h-7 rounded-md flex items-center justify-center shrink-0 mb-4"
                   style={{ background: 'var(--muted)', color: 'var(--brand)' }}
                 >
-                  <UiIcon name="assistant" className="w-3.5 h-3.5" />
+                  <Icon name="assistant" className="w-3.5 h-3.5" />
                 </div>
               )}
 
@@ -174,7 +174,7 @@ export default function ChatScreen() {
                 className="w-7 h-7 rounded-md flex items-center justify-center shrink-0"
                 style={{ background: 'var(--muted)', color: 'var(--brand)' }}
               >
-                <UiIcon name="assistant" className="w-3.5 h-3.5" />
+                <Icon name="assistant" className="w-3.5 h-3.5" />
               </div>
               <div
                 className="px-4 py-3.5"
@@ -283,10 +283,10 @@ export default function ChatScreen() {
 
         <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
           {[
-            { label: 'Documentos', value: '47', icon: 'document' as UiIconName },
-            { label: 'Medicamentos', value: '5 ativos', icon: 'medication' as UiIconName },
-            { label: 'Próxima consulta', value: '28 set', icon: 'user' as UiIconName },
-            { label: 'Lembretes hoje', value: '2', icon: 'reminder' as UiIconName },
+            { label: 'Documentos', value: '47', icon: 'document' as IconName },
+            { label: 'Medicamentos', value: '5 ativos', icon: 'medication' as IconName },
+            { label: 'Próxima consulta', value: '28 set', icon: 'user' as IconName },
+            { label: 'Lembretes hoje', value: '2', icon: 'reminder' as IconName },
           ].map(item => (
             <div
               key={item.label}
@@ -297,7 +297,7 @@ export default function ChatScreen() {
                 className="w-9 h-9 rounded-md flex items-center justify-center shrink-0"
                 style={{ background: 'var(--card)', color: 'var(--brand)' }}
               >
-                <UiIcon name={item.icon} className="w-4 h-4" />
+                <Icon name={item.icon} className="w-4 h-4" />
               </div>
               <div>
                 <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{item.label}</p>
