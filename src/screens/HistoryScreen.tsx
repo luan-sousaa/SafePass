@@ -1,4 +1,4 @@
-import UiIcon from '../components/UiIcon';
+import Icon from '../components/Icon';
 
 const timeline = [
   { date: '18 set 2026', items: [
@@ -52,7 +52,7 @@ export default function HistoryScreen() {
                   style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}
                 >
                   <div className="w-9 h-9 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-                    <UiIcon name="document" className="w-4 h-4" />
+                    <Icon name="document" className="w-4 h-4" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">

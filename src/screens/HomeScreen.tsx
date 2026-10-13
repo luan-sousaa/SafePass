@@ -1,4 +1,5 @@
-import type { Screen } from '../App';
+import Icon, { type IconName } from '../components/Icon';
+import type { Screen } from '../types';
 
 const recentDocs = [
   { type: 'Receita', name: 'Omeprazol 20mg', date: '18 set 2026' },
@@ -23,7 +24,7 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
       {/* Greeting */}
       <div className="flex items-end justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-semibold" style={{ color: 'var(--brand-dark)' }}>
+          <h2 className="text-3xl font-semibold" style={{ color: 'var(--brand-dark)' }}>
             {greeting}, {user.name.split(' ')[0]}
           </h2>
           <p className="text-sm mt-1" style={{ color: 'var(--muted-foreground)' }}>
@@ -38,10 +39,10 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Documentos', value: '47', icon: DocumentMetricIcon, nav: 'documents' as Screen },
-          { label: 'Medicamentos', value: '5', icon: MedicationMetricIcon, nav: 'medications' as Screen },
-          { label: 'Lembretes', value: '3', icon: ReminderMetricIcon, nav: 'reminders' as Screen },
-          { label: 'Dependentes', value: '2', icon: DependentMetricIcon, nav: 'dependents' as Screen },
+          { label: 'Documentos', value: '47', icon: 'document' as IconName, nav: 'documents' as Screen },
+          { label: 'Medicamentos', value: '5', icon: 'medication' as IconName, nav: 'medications' as Screen },
+          { label: 'Lembretes', value: '3', icon: 'reminder' as IconName, nav: 'reminders' as Screen },
+          { label: 'Dependentes', value: '2', icon: 'users' as IconName, nav: 'dependents' as Screen },
         ].map(card => (
           <button
             key={card.label}
@@ -51,7 +52,7 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
           >
             <div className="flex items-start justify-between gap-3">
               <div className="w-9 h-9 rounded-md flex items-center justify-center" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-                <card.icon className="w-4 h-4" />
+                <Icon name={card.icon} className="w-4 h-4" />
               </div>
               <span className="text-base transition-transform group-hover:translate-x-0.5" style={{ color: 'var(--muted-foreground)' }}>→</span>
             </div>
@@ -65,7 +66,7 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
         {/* Recent documents */}
         <div className="rounded-lg p-5" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-semibold" style={{ color: 'var(--brand-dark)' }}>
+            <h3 className="text-xl font-semibold" style={{ color: 'var(--brand-dark)' }}>
               Documentos recentes
             </h3>
             <button className="text-sm font-medium" style={{ color: 'var(--primary)' }} onClick={() => navigate('documents')}>
@@ -76,7 +77,7 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
             {recentDocs.map((doc, i) => (
               <div key={i} className="flex items-center gap-4 px-3 py-2.5 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
                 <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-                  <DocumentMetricIcon className="w-4 h-4" />
+                  <Icon name="document" className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>{doc.name}</p>
@@ -93,7 +94,7 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
         {/* Upcoming reminders */}
         <div className="rounded-lg p-5" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
           <div className="flex items-center justify-between mb-5">
-            <h3 className="text-base font-semibold" style={{ color: 'var(--brand-dark)' }}>
+            <h3 className="text-xl font-semibold" style={{ color: 'var(--brand-dark)' }}>
               Próximos lembretes
             </h3>
             <button className="text-sm font-medium" style={{ color: 'var(--primary)' }} onClick={() => navigate('reminders')}>
@@ -104,7 +105,7 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
             {upcomingReminders.map((r, i) => (
               <div key={i} className="flex items-center gap-4 px-3 py-2.5 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
                 <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-                  <ReminderMetricIcon className="w-4 h-4" />
+                  <Icon name="reminder" className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>{r.label}</p>
@@ -127,10 +128,10 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
             className="w-10 h-10 rounded-md flex items-center justify-center shrink-0"
             style={{ background: 'var(--muted)', color: 'var(--brand)' }}
           >
-            <AssistantIcon className="w-5 h-5" />
+            <Icon name="assistant" className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-semibold" style={{ color: 'var(--brand-dark)' }}>
+            <h3 className="text-xl font-semibold" style={{ color: 'var(--brand-dark)' }}>
               Assistente de saúde IA
             </h3>
             <p className="text-sm mt-0.5" style={{ color: 'var(--muted-foreground)' }}>
@@ -153,7 +154,7 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
         style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}
       >
         <div>
-          <h3 className="font-semibold" style={{ color: 'var(--brand-dark)' }}>
+          <h3 className="text-xl font-semibold" style={{ color: 'var(--brand-dark)' }}>
             Adicione um novo documento
           </h3>
           <p className="text-sm mt-1" style={{ color: 'var(--muted-foreground)' }}>
@@ -170,24 +171,4 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
       </div>
     </div>
   );
-}
-
-function DocumentMetricIcon({ className }: { className?: string }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M6 3h8l4 4v14H6z" /><path d="M14 3v5h5M9 13h6M9 17h6" /></svg>;
-}
-
-function MedicationMetricIcon({ className }: { className?: string }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M10.5 20.5l10-10a5 5 0 00-7-7l-10 10a5 5 0 007 7z" /><path d="M8.5 8.5l7 7" /></svg>;
-}
-
-function ReminderMetricIcon({ className }: { className?: string }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M18 8a6 6 0 00-12 0c0 7-3 9-3 9h18s-3-2-3-9M14 21h-4" /></svg>;
-}
-
-function DependentMetricIcon({ className }: { className?: string }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><circle cx="9" cy="8" r="3" /><path d="M3 20v-2a5 5 0 0110 0v2M16 4a3 3 0 010 6M17 14a5 5 0 014 4.58V20" /></svg>;
-}
-
-function AssistantIcon({ className }: { className?: string }) {
-  return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M21 15a3 3 0 01-3 3H8l-5 3V6a3 3 0 013-3h12a3 3 0 013 3z" /><path d="M8 9h8M8 13h5" /></svg>;
 }
