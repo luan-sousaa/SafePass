@@ -212,7 +212,7 @@ SAFEpass
 ### 1. Acesse a pasta do projeto
 
 ```bash
-cd "Digital Health Platform"
+cd SafePass-main
 ```
 
 ### 2. Instale as dependências
