@@ -135,6 +135,17 @@ OCR local via Tesseract (`repositories/tesseract_ocr.py`). Nesse caminho:
 4. Abrir a URL impressa no terminal, selecionar `receita_ocr_app`, anexar a foto de uma
    receita na mensagem e pedir para extrair os dados.
 
+### API HTTP (para o front-end)
+
+Expõe a extração em `POST /api/prescriptions/extract` (multipart, campo `file`, JPG/PNG
+até 10 MB) — contrato completo em `specs/prescription-api.md`. Usa o mesmo `.env`:
+
+```
+uvicorn api.main:app --reload --port 8000
+```
+
+Documentação interativa em http://localhost:8000/docs.
+
 ## SDD + TDD — como trabalhamos daqui pra frente
 
 Este projeto segue **spec-first**: nenhuma feature nova entra sem uma spec aprovada em
