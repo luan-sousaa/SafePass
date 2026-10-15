@@ -16,8 +16,9 @@ Monorepo do SAFEpass (gestão de documentos de saúde):
 
 Testes do agente: `.venv/bin/pytest` dentro de `agente/agents/`.
 
-O agente veio de github.com/joaaoow/prototipo_agente_ocr via `git subtree`. Para trazer
-atualizações de lá: `git subtree pull --prefix=agente https://github.com/joaaoow/prototipo_agente_ocr.git main`
+O agente veio de github.com/joaaoow/prototipo_agente_ocr via `git subtree` (histórico
+preservado). A partir de 2026-10-15 este repositório é a fonte da verdade do agente também —
+mudanças no agente são feitas aqui, não no repositório antigo.
 
 ## Front-end — comandos
 
