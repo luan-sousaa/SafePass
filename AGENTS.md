@@ -34,6 +34,7 @@ Gerenciador de pacotes: **npm**.
 - `src/App.tsx` — shell da aplicação e troca de telas (estado `screen`, sem router)
 - `src/types.ts` — tipos compartilhados (`Screen`, `User`)
 - `src/screens/` — uma tela por arquivo; dados de exemplo ficam no topo de cada tela
+- `src/services/` — chamadas HTTP; `prescriptions.ts` fala com a API do agente (`/api`, proxy do Vite → porta 8000)
 - `src/components/Icon.tsx` — todos os ícones SVG (`<Icon name="..." />`); adicione novos aqui
 - `src/components/layout/` — Sidebar, TopBar, NavList (itens do menu e títulos das telas), BrandLogo
 - `src/index.css` — import do Tailwind, fontes, tokens de cor (`--brand`, `--primary`…) e animações

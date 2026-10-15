@@ -9,5 +9,9 @@ export default defineConfig({
   },
   server: {
     port: 8443,
+    proxy: {
+      // API do agente (agente/agents): uvicorn api.main:app --port 8000
+      '/api': 'http://localhost:8000',
+    },
   },
 })

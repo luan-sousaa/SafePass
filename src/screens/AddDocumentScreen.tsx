@@ -1,34 +1,90 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Screen } from '../types';
-import Icon from '../components/Icon';
+import Icon, { type IconName } from '../components/Icon';
+import { extractPrescription, MAX_UPLOAD_BYTES, type Medicamento } from '../services/prescriptions';
 
 type Step = 'choose' | 'analyzing' | 'review' | 'error' | 'manual';
 
+const emptyItem: Medicamento = { medicamento: '', dose: '', posologia: '', periodo: '', precisa_revisar: false };
+
+const itemFields: { key: 'medicamento' | 'dose' | 'posologia' | 'periodo'; label: string; placeholder: string }[] = [
+  { key: 'medicamento', label: 'Medicamento', placeholder: 'Ex.: Amoxicilina' },
+  { key: 'dose', label: 'Dosagem', placeholder: 'Ex.: 500 mg' },
+  { key: 'posologia', label: 'Posologia', placeholder: 'Ex.: 1 cápsula a cada 8 horas' },
+  { key: 'periodo', label: 'Período', placeholder: 'Ex.: 7 dias' },
+];
+
+const cardStyle = { background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' };
+const inputClass =
+  'w-full px-4 py-3 rounded-xl text-sm outline-none border-[1.5px] border-[var(--border)] focus:border-[var(--primary)]';
+
 export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) => void }) {
   const [step, setStep] = useState<Step>('choose');
-  const [hasWarning, setHasWarning] = useState(false);
-  const [form, setForm] = useState({
-    medicamento: 'Amoxicilina 500mg',
-    dosagem: '500 mg',
-    posologia: '1 cápsula a cada 8 horas',
-    periodo: '7 dias',
-    data: '18/09/2026',
-  });
+  const [error, setError] = useState('');
+  const [needsReview, setNeedsReview] = useState(false);
+  const [rawText, setRawText] = useState<string | null>(null);
+  const [items, setItems] = useState<Medicamento[]>([emptyItem]);
+  const [date, setDate] = useState('');
+  const [preview, setPreview] = useState<string | null>(null);
+  const cameraInput = useRef<HTMLInputElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
 
-  const handleUpload = (type: 'photo' | 'file') => {
+  useEffect(() => () => { if (preview) URL.revokeObjectURL(preview); }, [preview]);
+
+  const fail = (message: string) => { setError(message); setStep('error'); };
+
+  const handleFile = async (file: File | undefined) => {
+    if (!file) return;
+    if (file.size > MAX_UPLOAD_BYTES) return fail('O arquivo tem mais de 10 MB. Envie uma foto menor.');
+
+    setPreview(URL.createObjectURL(file));
     setStep('analyzing');
-    setTimeout(() => {
-      const fail = Math.random() < 0.2;
-      if (fail) { setStep('error'); return; }
-      setHasWarning(Math.random() < 0.5);
-      setStep('review');
-    }, 2800);
+
+    try {
+      const result = await extractPrescription(file);
+
+      if (result.source === 'tesseract_fallback') {
+        setRawText(result.observacoes);
+        setItems([emptyItem]);
+        setStep('manual');
+      } else if (result.medicamentos.length === 0) {
+        fail('A foto não ficou legível ou não parece uma receita médica. Tente outra foto, mais nítida e bem iluminada.');
+      } else {
+        setItems(result.medicamentos);
+        setNeedsReview(result.needs_manual_review);
+        setStep('review');
+      }
+    } catch (err) {
+      fail(err instanceof Error ? err.message : 'Não foi possível analisar o documento.');
+    }
   };
 
+  const onPick = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleFile(e.target.files?.[0]);
+    e.target.value = ''; // permite escolher o mesmo arquivo de novo depois de "Tentar novamente"
+  };
+
+  const restart = () => {
+    setPreview(null);
+    setRawText(null);
+    setNeedsReview(false);
+    setItems([emptyItem]);
+    setStep('choose');
+  };
+
+  const updateItem = (index: number, key: keyof Medicamento, value: string) =>
+    setItems(prev => prev.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
+
   if (step === 'choose') {
+    const options: { icon: IconName; title: string; hint: string; onClick: () => void }[] = [
+      { icon: 'camera', title: 'Tirar foto', hint: 'Use a câmera do seu dispositivo', onClick: () => cameraInput.current?.click() },
+      { icon: 'folder', title: 'Enviar arquivo', hint: 'JPG ou PNG de até 10 MB', onClick: () => fileInput.current?.click() },
+      { icon: 'edit', title: 'Preencher manualmente', hint: 'Digite as informações diretamente', onClick: () => setStep('manual') },
+    ];
+
     return (
       <div className="max-w-md mx-auto animate-fade-in">
-        <div className="rounded-lg p-8 text-center space-y-6" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+        <div className="rounded-lg p-8 text-center space-y-6" style={cardStyle}>
           <div>
             <div className="w-12 h-12 rounded-md flex items-center justify-center mx-auto mb-4" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
               <Icon name="document" className="w-5 h-5" />
@@ -41,61 +97,30 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
             </p>
           </div>
 
+          {/* Inputs nativos: no celular, `capture` abre a câmera direto */}
+          <input ref={cameraInput} type="file" accept="image/jpeg,image/png" capture="environment" hidden onChange={onPick} />
+          <input ref={fileInput} type="file" accept="image/jpeg,image/png" hidden onChange={onPick} />
+
           <div className="space-y-3">
-            <button
-              onClick={() => handleUpload('photo')}
-              className="w-full flex items-center gap-4 p-4 rounded-lg text-left transition-colors"
-              style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--primary)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
-            >
-              <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-                <Icon name="camera" className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>Tirar foto</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>Use a câmera do seu dispositivo</p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => handleUpload('file')}
-              className="w-full flex items-center gap-4 p-4 rounded-lg text-left transition-colors"
-              style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--primary)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
-            >
-              <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-                <Icon name="folder" className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>Enviar arquivo</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>PDF, JPG ou PNG de até 20MB</p>
-              </div>
-            </button>
-
-            <button
-              onClick={() => setStep('manual')}
-              className="w-full flex items-center gap-4 p-4 rounded-lg text-left transition-colors"
-              style={{ background: 'var(--card)', border: '1px solid var(--border)' }}
-              onMouseEnter={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--primary)'; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLElement).style.borderColor = 'var(--border)'; }}
-            >
-              <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
-                <Icon name="edit" className="w-5 h-5" />
-              </div>
-              <div>
-                <p className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>Preencher manualmente</p>
-                <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>Digite as informações diretamente</p>
-              </div>
-            </button>
+            {options.map(option => (
+              <button
+                key={option.title}
+                onClick={option.onClick}
+                className="w-full flex items-center gap-4 p-4 rounded-lg text-left transition-colors border border-[var(--border)] hover:border-[var(--primary)]"
+                style={{ background: 'var(--card)' }}
+              >
+                <div className="w-10 h-10 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
+                  <Icon name={option.icon} className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm" style={{ color: 'var(--foreground)' }}>{option.title}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>{option.hint}</p>
+                </div>
+              </button>
+            ))}
           </div>
 
-          <button
-            onClick={() => navigate('documents')}
-            className="text-sm font-medium"
-            style={{ color: 'var(--muted-foreground)' }}
-          >
+          <button onClick={() => navigate('documents')} className="text-sm font-medium" style={{ color: 'var(--muted-foreground)' }}>
             Cancelar
           </button>
         </div>
@@ -106,9 +131,9 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
   if (step === 'analyzing') {
     return (
       <div className="max-w-md mx-auto animate-fade-in">
-        <div className="rounded-lg p-12 text-center space-y-6" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+        <div className="rounded-lg p-12 text-center space-y-6" style={cardStyle}>
           <div className="relative w-20 h-20 mx-auto">
-            <div className="absolute inset-0 rounded-full" style={{ background: 'rgba(13,148,136,0.15)' }} />
+            <div className="absolute inset-0 rounded-full" style={{ background: 'var(--muted)' }} />
             <div
               className="absolute inset-2 rounded-full animate-spin-slow"
               style={{ border: '3px solid transparent', borderTopColor: 'var(--primary)', borderRightColor: 'var(--primary)' }}
@@ -122,18 +147,8 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
               Analisando seu documento...
             </h2>
             <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-              Nossa IA está extraindo as informações. Isso leva alguns segundos.
+              Nossa IA está lendo a receita. Isso pode levar alguns segundos.
             </p>
-          </div>
-          <div className="space-y-2">
-            {['Lendo o documento', 'Identificando campos', 'Extraindo dados'].map((s, i) => (
-              <div key={i} className="flex items-center gap-3 text-left px-4">
-                <div className="w-5 h-5 rounded-full flex items-center justify-center shrink-0" style={{ background: 'rgba(13,148,136,0.15)' }}>
-                  <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: 'var(--primary)' }} />
-                </div>
-                <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>{s}</p>
-              </div>
-            ))}
           </div>
         </div>
       </div>
@@ -143,7 +158,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
   if (step === 'error') {
     return (
       <div className="max-w-md mx-auto animate-slide-up">
-        <div className="rounded-lg p-8 text-center space-y-6" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+        <div className="rounded-lg p-8 text-center space-y-6" style={cardStyle}>
           <div className="w-12 h-12 rounded-md flex items-center justify-center mx-auto" style={{ background: '#fef2f2', color: '#b91c1c' }}>
             <Icon name="alert" className="w-5 h-5" />
           </div>
@@ -151,13 +166,11 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
             <h2 className="text-2xl font-semibold mb-2" style={{ color: 'var(--brand-dark)' }}>
               Não foi possível identificar as informações
             </h2>
-            <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>
-              A imagem pode estar com baixa qualidade ou o documento não é reconhecível.
-            </p>
+            <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>{error}</p>
           </div>
           <div className="space-y-3">
             <button
-              onClick={() => { setStep('choose'); }}
+              onClick={restart}
               className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
               style={{ background: 'var(--primary)' }}
             >
@@ -176,84 +189,138 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
     );
   }
 
-  if (step === 'review' || step === 'manual') {
-    return (
-      <div className="max-w-lg mx-auto animate-slide-up space-y-5">
-        {hasWarning && step === 'review' && (
-          <div className="flex items-start gap-3 p-4 rounded-lg" style={{ background: '#fffbeb', border: '1px solid #fbbf24' }}>
-            <Icon name="alert" className="w-5 h-5 shrink-0" />
-            <div>
-              <p className="text-sm font-semibold" style={{ color: '#92400e' }}>Algumas informações precisam ser confirmadas</p>
-              <p className="text-xs mt-1" style={{ color: '#b45309' }}>Revise os campos destacados antes de salvar.</p>
-            </div>
+  // review | manual
+  return (
+    <div className={`${preview ? 'max-w-5xl' : 'max-w-lg'} mx-auto animate-slide-up space-y-5`}>
+      {step === 'review' && (needsReview ? (
+        <Banner tone="warn" title="Algumas informações precisam ser confirmadas" text="A leitura não ficou totalmente clara. Confira os medicamentos destacados com a foto antes de salvar." />
+      ) : (
+        <Banner tone="ok" title="Receita lida com sucesso" text="Confira os dados antes de salvar." />
+      ))}
+      {step === 'manual' && rawText !== null && (
+        <Banner tone="warn" title="A leitura automática não ficou disponível agora" text="Preencha os campos conferindo a foto e o texto capturado abaixo." />
+      )}
+
+      <div className={preview ? 'grid gap-5 lg:grid-cols-2 items-start' : ''}>
+        {preview && (
+          <div className="rounded-lg p-3 space-y-3 lg:sticky lg:top-0" style={cardStyle}>
+            <img src={preview} alt="Foto da receita enviada" className="w-full max-h-[32rem] object-contain rounded-md" style={{ background: 'var(--muted)' }} />
+            {rawText && (
+              <pre className="text-xs whitespace-pre-wrap p-3 rounded-md font-[inherit]" style={{ background: 'var(--muted)', color: 'var(--foreground)' }}>
+                {rawText}
+              </pre>
+            )}
           </div>
         )}
 
-        {step === 'review' && (
-          <div className="flex items-center gap-2 p-4 rounded-lg" style={{ background: '#f0fdf4', border: '1px solid #86efac' }}>
-            <Icon name="check" className="w-5 h-5 shrink-0" />
-            <p className="text-sm font-medium" style={{ color: '#166534' }}>Documento analisado com sucesso</p>
-          </div>
-        )}
-
-        <div className="rounded-lg p-6 space-y-5" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
+        <form
+          className="rounded-lg p-6 space-y-5"
+          style={cardStyle}
+          onSubmit={e => { e.preventDefault(); navigate('documents'); }}
+        >
           <h2 className="text-2xl font-semibold" style={{ color: 'var(--brand-dark)' }}>
             {step === 'review' ? 'Revisar informações' : 'Preencher manualmente'}
           </h2>
 
-          {Object.entries(form).map(([key, val]) => {
-            const labels: Record<string, string> = {
-              medicamento: 'Medicamento',
-              dosagem: 'Dosagem',
-              posologia: 'Posologia',
-              periodo: 'Período',
-              data: 'Data',
-            };
-            const warn = hasWarning && step === 'review' && (key === 'dosagem' || key === 'periodo');
-            return (
-              <div key={key} className="space-y-1.5">
-                <label className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
-                  {labels[key]}
-                </label>
-                <input
-                  type="text"
-                  value={val}
-                  onChange={e => setForm(f => ({ ...f, [key]: e.target.value }))}
-                  className="w-full px-4 py-3 rounded-xl text-sm outline-none"
-                  style={{
-                    background: 'var(--muted)',
-                    color: 'var(--foreground)',
-                    border: warn ? '1.5px solid #f59e0b' : '1.5px solid var(--border)',
-                    boxShadow: warn ? '0 0 0 3px rgba(245,158,11,0.12)' : 'none',
-                  }}
-                  onFocus={e => { e.target.style.borderColor = 'var(--primary)'; e.target.style.boxShadow = '0 0 0 3px rgba(13,148,136,0.12)'; }}
-                  onBlur={e => { e.target.style.borderColor = warn ? '#f59e0b' : 'var(--border)'; e.target.style.boxShadow = warn ? '0 0 0 3px rgba(245,158,11,0.12)' : 'none'; }}
-                />
-                {warn && <p className="text-xs" style={{ color: '#b45309' }}>Confirme este campo</p>}
+          {items.map((item, index) => (
+            <div
+              key={index}
+              role="group"
+              aria-label={`Medicamento ${index + 1}`}
+              className="rounded-lg p-4 space-y-4"
+              style={{
+                border: item.precisa_revisar ? '1.5px solid #f59e0b' : '1px solid var(--border)',
+                boxShadow: item.precisa_revisar ? '0 0 0 3px rgba(245,158,11,0.12)' : 'none',
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold" style={{ color: 'var(--brand-dark)' }}>
+                  Medicamento {index + 1}
+                </p>
+                {items.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={() => setItems(prev => prev.filter((_, i) => i !== index))}
+                    className="text-xs font-medium"
+                    style={{ color: 'var(--muted-foreground)' }}
+                  >
+                    Remover
+                  </button>
+                )}
               </div>
-            );
-          })}
+              {item.precisa_revisar && <p className="text-xs -mt-2" style={{ color: '#b45309' }}>Confira este medicamento com a foto</p>}
+
+              {itemFields.map(field => (
+                <label key={field.key} className="block space-y-1.5">
+                  <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
+                    {field.label}
+                  </span>
+                  <input
+                    type="text"
+                    required={field.key === 'medicamento'}
+                    value={item[field.key]}
+                    placeholder={field.placeholder}
+                    onChange={e => updateItem(index, field.key, e.target.value)}
+                    className={inputClass}
+                    style={{ color: 'var(--foreground)' }}
+                  />
+                </label>
+              ))}
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() => setItems(prev => [...prev, emptyItem])}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold border border-dashed border-[var(--border)] hover:border-[var(--primary)]"
+            style={{ color: 'var(--brand)' }}
+          >
+            <Icon name="plus" className="w-4 h-4" />
+            Adicionar medicamento
+          </button>
+
+          <label className="block space-y-1.5">
+            <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
+              Data da receita
+            </span>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }} />
+          </label>
 
           <div className="flex gap-3 pt-2">
             <button
+              type="button"
               onClick={() => navigate('documents')}
               className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
               style={{ background: 'var(--muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
             >
               Cancelar
             </button>
+            {/* ponytail: ainda não persiste — salvar depende do backend/banco do squad */}
             <button
-              onClick={() => navigate('documents')}
+              type="submit"
               className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
               style={{ background: 'var(--primary)' }}
             >
               Confirmar e salvar
             </button>
           </div>
-        </div>
+        </form>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
-  return null;
+function Banner({ tone, title, text }: { tone: 'ok' | 'warn'; title: string; text: string }) {
+  const c = tone === 'ok'
+    ? { bg: '#f0fdf4', border: '#86efac', title: '#166534', text: '#15803d', icon: 'check' as const }
+    : { bg: '#fffbeb', border: '#fbbf24', title: '#92400e', text: '#b45309', icon: 'alert' as const };
+  return (
+    <div className="flex items-start gap-3 p-4 rounded-lg" style={{ background: c.bg, border: `1px solid ${c.border}`, color: c.title }}>
+      <Icon name={c.icon} className="w-5 h-5 shrink-0" />
+      <div>
+        <p className="text-sm font-semibold">{title}</p>
+        <p className="text-xs mt-1" style={{ color: c.text }}>{text}</p>
+      </div>
+    </div>
+  );
 }
