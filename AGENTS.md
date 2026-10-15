@@ -1,8 +1,25 @@
 # SAFEpass
 
-Front-end do SAFEpass (gestão de documentos de saúde) em React 19 + Vite + Tailwind CSS v4 + TypeScript.
+Monorepo do SAFEpass (gestão de documentos de saúde):
 
-## Comandos
+- **raiz** — front-end em React 19 + Vite + Tailwind CSS v4 + TypeScript (seções abaixo)
+- **`agente/`** — agente de IA de OCR de receitas (Python, Google ADK + Gemini) e a API HTTP
+  que o front consome. Regras próprias em `agente/CLAUDE.md` (spec antes do código, TDD);
+  arquitetura em `agente/agents/README.md`.
+
+## Rodando tudo
+
+1. API (de dentro de `agente/agents/`, com `.env` contendo `GOOGLE_API_KEY`):
+   `python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt`
+   `.venv/bin/uvicorn api.main:app --reload --port 8000`
+2. Front (raiz): `npm run dev`
+
+Testes do agente: `.venv/bin/pytest` dentro de `agente/agents/`.
+
+O agente veio de github.com/joaaoow/prototipo_agente_ocr via `git subtree`. Para trazer
+atualizações de lá: `git subtree pull --prefix=agente https://github.com/joaaoow/prototipo_agente_ocr.git main`
+
+## Front-end — comandos
 
 Gerenciador de pacotes: **npm**.
 
