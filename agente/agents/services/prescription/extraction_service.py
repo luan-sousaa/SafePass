@@ -3,13 +3,7 @@ from typing import Optional
 from google.genai import types
 from pydantic import BaseModel, Field
 
-from config.gemini_config import (
-    DEFAULT_MODEL,
-    GENERATION_TEMPERATURE,
-    GEMINI_RETRY_ATTEMPTS,
-    GEMINI_RETRY_INITIAL_DELAY,
-    GEMINI_RETRY_MAX_DELAY,
-)
+from config.gemini_config import DEFAULT_MODEL, GENERATION_TEMPERATURE
 from factories.model_factory import next_api_key
 from prompts.extract_prescription_prompt import EXTRACT_PRESCRIPTION_PROMPT
 from repositories.custom_gemini import build_genai_client
@@ -66,16 +60,7 @@ def _extract_with_gemini(image_bytes: bytes, mime_type: str) -> ExtractionResult
             temperature=GENERATION_TEMPERATURE,
             response_mime_type="application/json",
             response_schema=PrescriptionExtraction,
-            http_options=types.HttpOptions(
-                retry_options=types.HttpRetryOptions(
-                    attempts=GEMINI_RETRY_ATTEMPTS,
-                    initial_delay=GEMINI_RETRY_INITIAL_DELAY,
-                    max_delay=GEMINI_RETRY_MAX_DELAY,
-                    # defaults do SDK já cobrem 408/429/500/502/503/504 — inclui o
-                    # 503 "high demand" que motivou essa mudança.
-                )
-            ),
-        ),
+        ),  # retry (408/429/5xx) já vem do client: build_genai_client
     )
 
     extraction: Optional[PrescriptionExtraction] = response.parsed

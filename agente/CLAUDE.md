@@ -14,8 +14,7 @@ HTTP, dados, banco). **Não crie nem edite arquivos fora de `agents/` sem o usu�
 explicitamente** — outras pessoas do squad trabalham nessas frentes em paralelo.
 
 Para a arquitetura completa do agente (fluxo, decisões de design, HITL, fallback
-offline), veja **[`agents/README.md`](agents/README.md)**. Para um mapa navegável do
-código com diagramas, veja **[`docs/CODEBASE_MAP.md`](docs/CODEBASE_MAP.md)**.
+offline), veja **[`agents/README.md`](agents/README.md)**.
 
 ## Stack
 
@@ -44,7 +43,7 @@ usado, o agente força `needs_manual_review=True`.
 ```bash
 pip install -r requirements.txt
 # preencher .env com GOOGLE_API_KEY (ou GOOGLE_API_KEYS=chave1,chave2,chave3)
-adk web apps   # não `adk web` sozinho — ver gotcha no CODEBASE_MAP.md
+adk web apps   # não `adk web` sozinho: ele trata cada subpasta de agents/ como app
 ```
 
 ## Workflow: SDD + TDD (obrigatório para código novo em `agents/`)

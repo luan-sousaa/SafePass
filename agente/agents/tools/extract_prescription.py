@@ -42,9 +42,7 @@ async def extract_prescription(tool_context: ToolContext) -> dict[str, Any]:
 
     return {
         "status": "success",
-        "medicamentos": [item.model_dump() for item in result.data.medicamentos],
-        "confidence_geral": result.data.confidence_geral,
-        "observacoes": result.data.observacoes,
+        **result.data.model_dump(),
         "needs_manual_review": result.needs_manual_review,
         "low_confidence_fields": result.low_confidence_fields,
         "source": result.source,

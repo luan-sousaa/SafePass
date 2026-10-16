@@ -62,7 +62,7 @@ só a conclusão em linguagem natural)
 
 | Pasta | Responsabilidade |
 |---|---|
-| `apps/receita_ocr_app/` | `agent.py` (o `root_agent`, único agente ADK) e `runner.py` (helper de teste fora do `adk web`) |
+| `apps/receita_ocr_app/` | `agent.py` (o `root_agent`, único agente ADK) |
 | `tools/` | `extract_prescription.py` — a ferramenta ADK chamada pelo orquestrador |
 | `services/prescription/` | `extraction_service.py` — chamada direta ao Gemini + schemas Pydantic (`MedicationItem`, `PrescriptionExtraction`, `ExtractionResult`) |
 | `prompts/` | `orchestrator_prompt.py` (como o agente conversa com o usuário) e `extract_prescription_prompt.py` (instrução da chamada de extração — não fala com o usuário) |

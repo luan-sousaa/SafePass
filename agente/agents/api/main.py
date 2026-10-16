@@ -55,13 +55,7 @@ def extract(file: UploadFile) -> ExtracaoOut:
         needs_manual_review=result.needs_manual_review,
         observacoes=result.data.observacoes,
         medicamentos=[
-            MedicamentoOut(
-                medicamento=item.medicamento,
-                dose=item.dose,
-                posologia=item.posologia,
-                periodo=item.periodo,
-                precisa_revisar=item.confidence < CONFIDENCE_THRESHOLD,
-            )
+            {**item.model_dump(exclude={"confidence"}), "precisa_revisar": item.confidence < CONFIDENCE_THRESHOLD}
             for item in result.data.medicamentos
         ],
     )

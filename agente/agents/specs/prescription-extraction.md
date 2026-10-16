@@ -111,9 +111,8 @@ def apply_hitl_guard(extraction: PrescriptionExtraction) -> tuple[bool, list[str
   não foi possível.
 - **AC-7** (FR-6): Dado `GOOGLE_API_KEYS="k1,k2,k3"`, quando `next_api_key()` é chamado
   4 vezes seguidas, então a sequência é `k1, k2, k3, k1` (round-robin).
-- **AC-8** (FR-7): Quando `_extract_with_gemini` monta a `GenerateContentConfig`, então
-  `http_options.retry_options.attempts` é maior que 1 (retry habilitado, não o
-  comportamento padrão do SDK de tentar só uma vez).
+- **AC-8** (FR-7): ~~retry por chamada em `_extract_with_gemini`~~ — removido em
+  2026-10-15: duplicava o retry do client, que a extração já usa (coberto pelo AC-9).
 - **AC-9** (FR-7): Quando `build_genai_client()` é chamado (usado tanto por
   `CustomGemini.api_client`, o modelo do orquestrador, quanto pela extração direta),
   então o `Client` retornado tem `http_options.retry_options.attempts` maior que 1.

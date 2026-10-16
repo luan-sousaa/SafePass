@@ -97,5 +97,4 @@ flowchart TD
 ## Documentação relacionada
 
 - [`agents/README.md`](../agents/README.md) — detalhes técnicos, estrutura de pastas, como rodar.
-- [`docs/CODEBASE_MAP.md`](CODEBASE_MAP.md) — mapa navegável do código, módulo a módulo.
 - [`agents/specs/prescription-extraction.md`](../agents/specs/prescription-extraction.md) — spec com requisitos e critérios de aceite.
