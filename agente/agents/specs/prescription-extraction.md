@@ -57,6 +57,10 @@ passo só) em vez de OCR tradicional + regras, que erra muito com letra manuscri
   entre "6 horas" e "8 horas"), mas a `confidence` reportada ficou sempre em 0.8–0.85 —
   acima do limiar antigo de 0.75. `CONFIDENCE_THRESHOLD` foi subido pra **0.9** como
   consequência direta desse achado (ver `config/confidence_config.py`).
+- **FR-9**: Quando cair no fallback (FR-4/EC-5), o sistema MUST registrar no log
+  (nível WARNING, com o traceback) a exceção que causou a queda. Motivo (validação de
+  2026-10-16): o fallback engolia o erro em silêncio, e um 429 de cota e a falta do
+  pacote de idioma `por` do Tesseract só foram descobertos rodando o código na mão.
 
 ## Interface / contrato
 
@@ -121,6 +125,9 @@ def apply_hitl_guard(extraction: PrescriptionExtraction) -> tuple[bool, list[str
   borrada enviada 3 vezes seguidas, a maioria das chamadas deve devolver
   `needs_manual_review=True` com o novo `CONFIDENCE_THRESHOLD=0.9` — reprodução do
   incidente do FR-8 usada como critério de regressão manual.
+- **AC-11** (FR-9): Dado que o Gemini e o Tesseract falham, quando
+  `extract_prescription` é chamado, então são registrados dois WARNINGs no logger do
+  serviço, cada um com a exceção correspondente (`exc_info`).
 
 ## Casos de borda
 
