@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Screen } from '../types';
 import Icon, { type IconName } from '../components/Icon';
-import { extractPrescription, MAX_UPLOAD_BYTES, type Medicamento } from '../services/prescriptions';
+import { extractPrescription, type Medicamento } from '../services/prescriptions';
 
 type Step = 'choose' | 'analyzing' | 'review' | 'error' | 'manual';
 
@@ -17,6 +17,8 @@ const itemFields: { key: 'medicamento' | 'dose' | 'posologia' | 'periodo'; label
 const cardStyle = { background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' };
 const inputClass =
   'w-full px-4 py-3 rounded-xl text-sm outline-none border-[1.5px] border-[var(--border)] focus:border-[var(--primary)]';
+const btnPrimary = 'py-3 rounded-xl text-sm font-semibold text-white bg-[var(--primary)] transition-opacity hover:opacity-90';
+const btnSecondary = 'py-3 rounded-xl text-sm font-semibold bg-[var(--muted)] text-[var(--foreground)] border border-[var(--border)]';
 
 export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) => void }) {
   const [step, setStep] = useState<Step>('choose');
@@ -35,7 +37,6 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
-    if (file.size > MAX_UPLOAD_BYTES) return fail('O arquivo tem mais de 10 MB. Envie uma foto menor.');
 
     setPreview(URL.createObjectURL(file));
     setStep('analyzing');
@@ -169,20 +170,8 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
             <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>{error}</p>
           </div>
           <div className="space-y-3">
-            <button
-              onClick={restart}
-              className="w-full py-3 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              style={{ background: 'var(--primary)' }}
-            >
-              Tentar novamente
-            </button>
-            <button
-              onClick={() => setStep('manual')}
-              className="w-full py-3 rounded-xl text-sm font-semibold transition-all"
-              style={{ background: 'var(--muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
-            >
-              Preencher manualmente
-            </button>
+            <button onClick={restart} className={`w-full ${btnPrimary}`}>Tentar novamente</button>
+            <button onClick={() => setStep('manual')} className={`w-full ${btnSecondary}`}>Preencher manualmente</button>
           </div>
         </div>
       </div>
@@ -287,22 +276,9 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
           </label>
 
           <div className="flex gap-3 pt-2">
-            <button
-              type="button"
-              onClick={() => navigate('documents')}
-              className="flex-1 py-3 rounded-xl text-sm font-semibold transition-all"
-              style={{ background: 'var(--muted)', color: 'var(--foreground)', border: '1px solid var(--border)' }}
-            >
-              Cancelar
-            </button>
+            <button type="button" onClick={() => navigate('documents')} className={`flex-1 ${btnSecondary}`}>Cancelar</button>
             {/* ponytail: ainda não persiste — salvar depende do backend/banco do squad */}
-            <button
-              type="submit"
-              className="flex-1 py-3 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90"
-              style={{ background: 'var(--primary)' }}
-            >
-              Confirmar e salvar
-            </button>
+            <button type="submit" className={`flex-1 ${btnPrimary}`}>Confirmar e salvar</button>
           </div>
         </form>
       </div>

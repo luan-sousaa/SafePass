@@ -14,8 +14,6 @@ export type Extracao = {
   medicamentos: Medicamento[];
 };
 
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-
 export async function extractPrescription(file: File): Promise<Extracao> {
   const body = new FormData();
   body.append('file', file);
