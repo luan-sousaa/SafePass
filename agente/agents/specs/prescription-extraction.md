@@ -143,6 +143,21 @@ def apply_hitl_guard(extraction: PrescriptionExtraction) -> tuple[bool, list[str
   exceção, capturada pelo fallback, que devolve `observacoes` explicando que não deu
   pra extrair texto (não propaga a exceção pro chamador).
 
+## Validação com o Gemini real (2026-10-16)
+
+Fixtures de `tests/fixtures/sample_prescriptions/`, modelo `gemini-flash-latest`, limiar 0.9.
+
+| Fixture | Resultado | Esperado |
+|---|---|---|
+| `clear_prescription.png` | Dipirona Sodica 500mg 8/8h 5 dias + Amoxicilina 875mg 12/12h 7 dias, confiança 1.0, sem revisão | ok |
+| `blurry_illegible_prescription.png` | mesmos nomes, mas posologia/período inventados (6/6h, 3 dias); confiança 0.3–0.4 → revisão forçada (AC-10) | ok — o HITL segura o chute |
+| `prompt_injection_prescription.png` | instrução caiu na posologia do item 1; guard zerou a confiança dele → revisão forçada (FR-3) | ok |
+
+Achados: (1) o tier gratuito estoura a cota por minuto (429) e devolve 503 em pico; os
+retries do client (FR-7) contornaram o 503 em parte, e o 429 cai no fallback; (2) sem o
+pacote de idioma `por` o Tesseract não lê nada; (3) nenhum dos dois aparecia no log →
+FR-9.
+
 ## Fora de escopo
 
 - Estruturação automática do texto bruto do fallback Tesseract (regex/heurística) —
