@@ -1,35 +1,45 @@
-# figma-make-app
+# SAFEpass
 
-React + Vite + Tailwind CSS project running inside Figma Make.
+Monorepo do SAFEpass (gestão de documentos de saúde):
 
-## Development Server
+- **raiz** — front-end em React 19 + Vite + Tailwind CSS v4 + TypeScript (seções abaixo)
+- **`agente/`** — agente de IA de OCR de receitas (Python, Google ADK + Gemini) e a API HTTP
+  que o front consome. Regras próprias em `agente/CLAUDE.md` (spec antes do código, TDD);
+  arquitetura em `agente/agents/README.md`.
 
-A Vite development server is **already running** on `$PORT` (default 8443). You don't need to start it manually.
+## Rodando tudo
 
-- Preview URL: The user can access the running app through the preview panel
-- Hot reload: Changes to source files are reflected immediately
+1. API (de dentro de `agente/agents/`, com `.env` contendo `GOOGLE_API_KEY`):
+   `python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt`
+   `.venv/bin/uvicorn api.main:app --reload --port 8000`
+2. Front (raiz): `npm run dev`
 
-## Project Structure
+Testes do agente: `.venv/bin/pytest` dentro de `agente/agents/`.
 
-This is the canonical project structure. Start with task-relevant files below. Only follow imports or inspect other files when required, when a documented path is missing, or when the repository contradicts this guide.
+O agente veio de github.com/joaaoow/prototipo_agente_ocr via `git subtree` (histórico
+preservado). A partir de 2026-10-15 este repositório é a fonte da verdade do agente também —
+mudanças no agente são feitas aqui, não no repositório antigo.
 
-- `src/main.tsx` - React entrypoint; imports `src/index.css` and mounts `src/App.tsx` into the `#root` element
-- `src/App.tsx` - Primary application component and the usual starting point for UI work
-- `src/index.css` - Global CSS entrypoint and Tailwind CSS v4 import
-- `index.html` - Vite HTML shell containing the `#root` element and loading `src/main.tsx`
-- `package.json` - Project dependencies and the Vite build, development, preview, and formatting scripts
-- `vite.config.ts` - Vite configuration with React, Tailwind CSS v4, and Figma Make plugins plus the `@` alias for `src`
-- `.mise.toml` - Toolchain versions for Node.js and pnpm
+## Front-end — comandos
 
-## Dependencies
+Gerenciador de pacotes: **npm**.
 
-- Runtime: React 19 and React DOM 19
-- Styling: Tailwind CSS v4 with the `@tailwindcss/vite` plugin
-- Build tooling: Vite 8, TypeScript 5.7, and `@vitejs/plugin-react`
-- Formatting: oxfmt
+- `npm install` — instala dependências
+- `npm run dev` — servidor de desenvolvimento em http://localhost:8443
+- `npm run build` — build de produção em `dist/`
+- `npx tsc --noEmit` — checagem de tipos
 
-## Styling
+## Estrutura
 
-This project uses **Tailwind CSS v4** through the `@tailwindcss/vite` plugin configured in `vite.config.ts`. `src/index.css` imports Tailwind with `@import 'tailwindcss';`. Use Tailwind utility classes directly in JSX and put global CSS or Tailwind v4 theme customization in `src/index.css`. This scaffold does not need a Tailwind config file or PostCSS config.
+- `src/App.tsx` — shell da aplicação e troca de telas (estado `screen`, sem router)
+- `src/types.ts` — tipos compartilhados (`Screen`, `User`)
+- `src/screens/` — uma tela por arquivo; dados de exemplo ficam no topo de cada tela
+- `src/components/Icon.tsx` — todos os ícones SVG (`<Icon name="..." />`); adicione novos aqui
+- `src/components/layout/` — Sidebar, TopBar, NavList (itens do menu e títulos das telas), BrandLogo
+- `src/index.css` — import do Tailwind, fontes, tokens de cor (`--brand`, `--primary`…) e animações
 
-`src/main.tsx` imports `src/index.css`, so global font wiring belongs in `src/index.css`. Keep CSS `@import` statements first, then add any `@font-face` rules and font-family defaults there.
+## Estilo
+
+- Tailwind direto no JSX; cores via variáveis CSS de `src/index.css` (`var(--brand)`), não hex solto.
+- Tipografia: **Nunito Sans** no texto/interface, **Yanone Kaffeesatz** só em títulos (`h1`–`h6`, é condensada — use tamanhos `text-xl`+), **Days One** no logo.
+- Interface em português (pt-BR).
