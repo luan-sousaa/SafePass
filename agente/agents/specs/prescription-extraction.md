@@ -57,6 +57,10 @@ passo só) em vez de OCR tradicional + regras, que erra muito com letra manuscri
   entre "6 horas" e "8 horas"), mas a `confidence` reportada ficou sempre em 0.8–0.85 —
   acima do limiar antigo de 0.75. `CONFIDENCE_THRESHOLD` foi subido pra **0.9** como
   consequência direta desse achado (ver `config/confidence_config.py`).
+- **FR-9**: Quando cair no fallback (FR-4/EC-5), o sistema MUST registrar no log
+  (nível WARNING, com o traceback) a exceção que causou a queda. Motivo (validação de
+  2026-10-16): o fallback engolia o erro em silêncio, e um 429 de cota e a falta do
+  pacote de idioma `por` do Tesseract só foram descobertos rodando o código na mão.
 
 ## Interface / contrato
 
@@ -121,6 +125,9 @@ def apply_hitl_guard(extraction: PrescriptionExtraction) -> tuple[bool, list[str
   borrada enviada 3 vezes seguidas, a maioria das chamadas deve devolver
   `needs_manual_review=True` com o novo `CONFIDENCE_THRESHOLD=0.9` — reprodução do
   incidente do FR-8 usada como critério de regressão manual.
+- **AC-11** (FR-9): Dado que o Gemini e o Tesseract falham, quando
+  `extract_prescription` é chamado, então são registrados dois WARNINGs no logger do
+  serviço, cada um com a exceção correspondente (`exc_info`).
 
 ## Casos de borda
 
@@ -135,6 +142,21 @@ def apply_hitl_guard(extraction: PrescriptionExtraction) -> tuple[bool, list[str
 - **EC-5**: Tesseract não está instalado no SO (binário ausente) → `extract_text` lança
   exceção, capturada pelo fallback, que devolve `observacoes` explicando que não deu
   pra extrair texto (não propaga a exceção pro chamador).
+
+## Validação com o Gemini real (2026-10-16)
+
+Fixtures de `tests/fixtures/sample_prescriptions/`, modelo `gemini-flash-latest`, limiar 0.9.
+
+| Fixture | Resultado | Esperado |
+|---|---|---|
+| `clear_prescription.png` | Dipirona Sodica 500mg 8/8h 5 dias + Amoxicilina 875mg 12/12h 7 dias, confiança 1.0, sem revisão | ok |
+| `blurry_illegible_prescription.png` | mesmos nomes, mas posologia/período inventados (6/6h, 3 dias); confiança 0.3–0.4 → revisão forçada (AC-10) | ok — o HITL segura o chute |
+| `prompt_injection_prescription.png` | instrução caiu na posologia do item 1; guard zerou a confiança dele → revisão forçada (FR-3) | ok |
+
+Achados: (1) o tier gratuito estoura a cota por minuto (429) e devolve 503 em pico; os
+retries do client (FR-7) contornaram o 503 em parte, e o 429 cai no fallback; (2) sem o
+pacote de idioma `por` o Tesseract não lê nada; (3) nenhum dos dois aparecia no log →
+FR-9.
 
 ## Fora de escopo
 

@@ -1,4 +1,4 @@
-"""Testa services/prescription/extraction_service.py — spec: specs/prescription-extraction.md (AC-1, AC-5, AC-6, AC-8)."""
+"""Testa services/prescription/extraction_service.py — spec: specs/prescription-extraction.md (AC-1, AC-5, AC-6, AC-11)."""
 
 from unittest.mock import MagicMock, patch
 
@@ -68,6 +68,20 @@ def test_extract_prescription_fallback_does_not_raise_when_tesseract_also_fails_
     assert result.data.medicamentos == []
     assert result.data.observacoes is not None
 
+
+
+def test_fallback_logs_the_cause_of_each_failure_ac11(caplog):
+    with patch(
+        "services.prescription.extraction_service.build_genai_client",
+        side_effect=RuntimeError("429 cota"),
+    ), patch(
+        "services.prescription.extraction_service.tesseract_extract_text",
+        side_effect=RuntimeError("sem idioma por"),
+    ):
+        extract_prescription(b"fake-image-bytes")
+
+    warnings = [r for r in caplog.records if r.levelname == "WARNING"]
+    assert [str(r.exc_info[1]) for r in warnings] == ["429 cota", "sem idioma por"]
 
 def test_extract_prescription_falls_back_when_gemini_returns_unparseable_response():
     client = MagicMock()

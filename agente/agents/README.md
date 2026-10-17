@@ -97,7 +97,8 @@ OCR local via Tesseract (`repositories/tesseract_ocr.py`). Nesse caminho:
 - `needs_manual_review` vem sempre `true` e `source` vem `"tesseract_fallback"`, para o
   orquestrador explicar a situação ao usuário (sem revelar detalhe técnico do erro).
 - Requer o **binário do Tesseract instalado no sistema** (o pacote `pytesseract` é só um
-  wrapper em Python, não inclui o motor de OCR). No Windows, instale via
+  wrapper em Python, não inclui o motor de OCR) **e do pacote de idioma português** —
+  sem ele o fallback não lê nada. No macOS: `brew install tesseract tesseract-lang`. No Windows, instale via
   [UB-Mannheim/tesseract](https://github.com/UB-Mannheim/tesseract/wiki) com o pacote de
   idioma português, e aponte `TESSERACT_CMD` no `.env` se o binário não estiver no PATH
   (ex.: `TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe`).

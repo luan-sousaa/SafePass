@@ -1,3 +1,4 @@
+import logging
 from typing import Optional
 
 from google.genai import types
@@ -9,6 +10,8 @@ from prompts.extract_prescription_prompt import EXTRACT_PRESCRIPTION_PROMPT
 from repositories.custom_gemini import build_genai_client
 from repositories.tesseract_ocr import extract_text as tesseract_extract_text
 from security.review_guard import apply_hitl_guard
+
+logger = logging.getLogger(__name__)
 
 
 class MedicationItem(BaseModel):
@@ -44,6 +47,7 @@ def extract_prescription(image_bytes: bytes, mime_type: str = "image/jpeg") -> E
     try:
         return _extract_with_gemini(image_bytes, mime_type)
     except Exception:
+        logger.warning("Gemini falhou; usando fallback Tesseract", exc_info=True)
         return _extract_with_tesseract_fallback(image_bytes)
 
 
@@ -82,6 +86,7 @@ def _extract_with_tesseract_fallback(image_bytes: bytes) -> ExtractionResult:
     try:
         raw_text = tesseract_extract_text(image_bytes)
     except Exception:
+        logger.warning("Tesseract falhou; seguindo sem texto bruto", exc_info=True)
         raw_text = ""
 
     observacoes = (

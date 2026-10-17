@@ -78,9 +78,12 @@ select:focus-visible {
     var(--app-surface);
 }
 
-.app-main > div:not(.flex) {
-  max-width: 80rem;
-  margin-inline: auto;
+/* Em @layer base para que max-w-* das próprias telas prevaleça */
+@layer base {
+  .app-main > div:not(.flex) {
+    max-width: 80rem;
+    margin-inline: auto;
+  }
 }
 
 .app-main .rounded-2xl,
