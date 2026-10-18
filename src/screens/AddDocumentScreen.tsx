@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Screen } from '../types';
 import Icon, { type IconName } from '../components/Icon';
-import { extractPrescription, type Medicamento } from '../services/prescriptions';
+import { extractPrescription, savePrescription, type Medicamento } from '../services/prescriptions';
 
 type Step = 'choose' | 'analyzing' | 'review' | 'error' | 'manual';
 
@@ -27,6 +27,9 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
   const [rawText, setRawText] = useState<string | null>(null);
   const [items, setItems] = useState<Medicamento[]>([emptyItem]);
   const [date, setDate] = useState('');
+  const [medico, setMedico] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
   const cameraInput = useRef<HTMLInputElement>(null);
   const fileInput = useRef<HTMLInputElement>(null);
@@ -52,6 +55,8 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
         fail('A foto não ficou legível ou não parece uma receita médica. Tente outra foto, mais nítida e bem iluminada.');
       } else {
         setItems(result.medicamentos);
+        setMedico(result.medico ?? '');
+        setDate(result.data_receita ?? '');
         setNeedsReview(result.needs_manual_review);
         setStep('review');
       }
@@ -70,7 +75,26 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
     setRawText(null);
     setNeedsReview(false);
     setItems([emptyItem]);
+    setMedico('');
+    setDate('');
     setStep('choose');
+  };
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+    setSaveError('');
+    try {
+      await savePrescription({
+        medico: medico.trim() || null,
+        data_receita: date || null,
+        medicamentos: items.map(({ precisa_revisar: _, ...item }) => item),
+      });
+      navigate('medications');
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Não foi possível salvar a receita.');
+      setSaving(false);
+    }
   };
 
   const updateItem = (index: number, key: keyof Medicamento, value: string) =>
@@ -205,7 +229,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
         <form
           className="rounded-lg p-6 space-y-5"
           style={cardStyle}
-          onSubmit={e => { e.preventDefault(); navigate('documents'); }}
+          onSubmit={save}
         >
           <h2 className="text-2xl font-semibold" style={{ color: 'var(--brand-dark)' }}>
             {step === 'review' ? 'Revisar informações' : 'Preencher manualmente'}
@@ -268,17 +292,28 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
             Adicionar medicamento
           </button>
 
-          <label className="block space-y-1.5">
-            <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
-              Data da receita
-            </span>
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }} />
-          </label>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
+                Médico
+              </span>
+              <input type="text" value={medico} placeholder="Ex.: Dr. Carlos Mendes" onChange={e => setMedico(e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }} />
+            </label>
+            <label className="block space-y-1.5">
+              <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
+                Data da receita
+              </span>
+              <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }} />
+            </label>
+          </div>
+
+          {saveError && <Banner tone="warn" title="Não foi possível salvar" text={saveError} />}
 
           <div className="flex gap-3 pt-2">
             <button type="button" onClick={() => navigate('documents')} className={`flex-1 ${btnSecondary}`}>Cancelar</button>
-            {/* ponytail: ainda não persiste — salvar depende do backend/banco do squad */}
-            <button type="submit" className={`flex-1 ${btnPrimary}`}>Confirmar e salvar</button>
+            <button type="submit" disabled={saving} className={`flex-1 ${btnPrimary} disabled:opacity-60`}>
+              {saving ? 'Salvando...' : 'Confirmar e salvar'}
+            </button>
           </div>
         </form>
       </div>

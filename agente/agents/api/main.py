@@ -1,9 +1,10 @@
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, UploadFile
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, field_validator
 
 from config.confidence_config import CONFIDENCE_THRESHOLD
+from repositories import prescription_store
 from services.prescription.extraction_service import extract_prescription
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
@@ -27,7 +28,34 @@ class ExtracaoOut(BaseModel):
     source: str
     needs_manual_review: bool
     observacoes: Optional[str]
+    medico: Optional[str]
+    data_receita: Optional[str]
     medicamentos: list[MedicamentoOut]
+
+
+class MedicamentoIn(BaseModel):
+    medicamento: str
+    dose: str = ""
+    posologia: str = ""
+    periodo: str = ""
+
+    @field_validator("medicamento")
+    @classmethod
+    def _nome_obrigatorio(cls, v: str) -> str:
+        if not v.strip():
+            raise ValueError("informe o nome do medicamento")
+        return v.strip()
+
+
+class ReceitaIn(BaseModel):
+    medico: Optional[str] = None
+    data_receita: Optional[str] = None
+    medicamentos: list[MedicamentoIn] = Field(min_length=1)
+
+
+class ReceitaOut(ReceitaIn):
+    id: int
+    criado_em: str
 
 
 app = FastAPI(title="SAFEpass — API de extração de receitas")
@@ -54,8 +82,20 @@ def extract(file: UploadFile) -> ExtracaoOut:
         source=result.source,
         needs_manual_review=result.needs_manual_review,
         observacoes=result.data.observacoes,
+        medico=result.data.medico,
+        data_receita=result.data.data_receita,
         medicamentos=[
             {**item.model_dump(exclude={"confidence"}), "precisa_revisar": item.confidence < CONFIDENCE_THRESHOLD}
             for item in result.data.medicamentos
         ],
     )
+
+
+@app.post("/api/prescriptions", status_code=201, response_model=ReceitaOut)
+def save(receita: ReceitaIn) -> dict:
+    return prescription_store.salvar(receita.model_dump())
+
+
+@app.get("/api/prescriptions", response_model=list[ReceitaOut])
+def list_saved() -> list[dict]:
+    return prescription_store.listar()

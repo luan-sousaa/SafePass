@@ -2,6 +2,8 @@
 
 from unittest.mock import patch
 
+import pytest
+
 from fastapi.testclient import TestClient
 
 from api.main import MAX_UPLOAD_BYTES, app
@@ -18,9 +20,9 @@ PNG = b"\x89PNG\r\n\x1a\n" + b"fake-png"
 URL = "/api/prescriptions/extract"
 
 
-def _result(medicamentos, needs_review=False, source="gemini", observacoes=None):
+def _result(medicamentos, needs_review=False, source="gemini", observacoes=None, **extra):
     return ExtractionResult(
-        data=PrescriptionExtraction(medicamentos=medicamentos, confidence_geral=0.95, observacoes=observacoes),
+        data=PrescriptionExtraction(medicamentos=medicamentos, confidence_geral=0.95, observacoes=observacoes, **extra),
         needs_manual_review=needs_review,
         low_confidence_fields=[],
         source=source,
@@ -103,3 +105,43 @@ def test_requires_file_field_ec3():
     response = client.post(URL)
 
     assert response.status_code == 422
+
+
+@pytest.fixture
+def db(tmp_path, monkeypatch):
+    monkeypatch.setenv("SAFEPASS_DB", str(tmp_path / "test.db"))
+
+
+def test_returns_doctor_and_date_ac6():
+    result = _result([_item("Dipirona", 0.95)], medico="Dr. Carlos Mendes", data_receita="2026-09-17")
+
+    with patch("api.main.extract_prescription", return_value=result):
+        body = client.post(URL, files={"file": ("receita.jpg", JPEG, "image/jpeg")}).json()
+
+    assert body["medico"] == "Dr. Carlos Mendes"
+    assert body["data_receita"] == "2026-09-17"
+
+
+RECEITA = {
+    "medico": "Dr. Carlos Mendes",
+    "data_receita": "2026-09-17",
+    "medicamentos": [{"medicamento": "Dipirona", "dose": "500mg", "posologia": "1 cp 8/8h", "periodo": "5 dias"}],
+}
+
+
+def test_saves_and_lists_newest_first_ac7(db):
+    primeira = client.post("/api/prescriptions", json=RECEITA)
+    segunda = client.post("/api/prescriptions", json={**RECEITA, "medico": None})
+
+    assert primeira.status_code == segunda.status_code == 201
+    lista = client.get("/api/prescriptions").json()
+    assert [r["id"] for r in lista] == [segunda.json()["id"], primeira.json()["id"]]
+    assert lista[1]["medicamentos"] == RECEITA["medicamentos"]
+    assert lista[1]["criado_em"]
+
+
+def test_rejects_prescription_without_medications_ec4(db):
+    assert client.post("/api/prescriptions", json={**RECEITA, "medicamentos": []}).status_code == 422
+    vazio = {**RECEITA, "medicamentos": [{**RECEITA["medicamentos"][0], "medicamento": " "}]}
+    assert client.post("/api/prescriptions", json=vazio).status_code == 422
+    assert client.get("/api/prescriptions").json() == []

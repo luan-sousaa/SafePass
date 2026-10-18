@@ -26,6 +26,8 @@ class PrescriptionExtraction(BaseModel):
     medicamentos: list[MedicationItem]
     confidence_geral: float = Field(ge=0.0, le=1.0)
     observacoes: Optional[str] = None
+    medico: Optional[str] = None
+    data_receita: Optional[str] = None  # AAAA-MM-DD
 
 
 class ExtractionResult(BaseModel):
