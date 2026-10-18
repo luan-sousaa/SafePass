@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 
 def _connect() -> sqlite3.Connection:
     conn = sqlite3.connect(os.getenv("SAFEPASS_DB", "safepass.db"))
+    conn.row_factory = sqlite3.Row
     conn.execute(
         "CREATE TABLE IF NOT EXISTS receitas ("
         "id INTEGER PRIMARY KEY, medico TEXT, data_receita TEXT, criado_em TEXT NOT NULL, medicamentos TEXT NOT NULL)"
@@ -28,10 +29,5 @@ def salvar(receita: dict) -> dict:
 
 def listar() -> list[dict]:
     with _connect() as conn:
-        rows = conn.execute(
-            "SELECT id, medico, data_receita, criado_em, medicamentos FROM receitas ORDER BY id DESC"
-        ).fetchall()
-    return [
-        {"id": id_, "medico": medico, "data_receita": data, "criado_em": criado_em, "medicamentos": json.loads(meds)}
-        for id_, medico, data, criado_em, meds in rows
-    ]
+        rows = conn.execute("SELECT * FROM receitas ORDER BY id DESC").fetchall()
+    return [{**dict(row), "medicamentos": json.loads(row["medicamentos"])} for row in rows]

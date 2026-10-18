@@ -1,7 +1,7 @@
-from typing import Optional
+from typing import Annotated, Optional
 
 from fastapi import FastAPI, HTTPException, UploadFile
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, StringConstraints
 
 from config.confidence_config import CONFIDENCE_THRESHOLD
 from repositories import prescription_store
@@ -34,17 +34,10 @@ class ExtracaoOut(BaseModel):
 
 
 class MedicamentoIn(BaseModel):
-    medicamento: str
+    medicamento: Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
     dose: str = ""
     posologia: str = ""
     periodo: str = ""
-
-    @field_validator("medicamento")
-    @classmethod
-    def _nome_obrigatorio(cls, v: str) -> str:
-        if not v.strip():
-            raise ValueError("informe o nome do medicamento")
-        return v.strip()
 
 
 class ReceitaIn(BaseModel):

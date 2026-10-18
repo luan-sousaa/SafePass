@@ -264,10 +264,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
               {item.precisa_revisar && <p className="text-xs -mt-2" style={{ color: '#b45309' }}>Confira este medicamento com a foto</p>}
 
               {itemFields.map(field => (
-                <label key={field.key} className="block space-y-1.5">
-                  <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
-                    {field.label}
-                  </span>
+                <Field key={field.key} label={field.label}>
                   <input
                     type="text"
                     required={field.key === 'medicamento'}
@@ -277,7 +274,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
                     className={inputClass}
                     style={{ color: 'var(--foreground)' }}
                   />
-                </label>
+                </Field>
               ))}
             </div>
           ))}
@@ -293,18 +290,12 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
           </button>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="block space-y-1.5">
-              <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
-                Médico
-              </span>
+            <Field label="Médico">
               <input type="text" value={medico} placeholder="Ex.: Dr. Carlos Mendes" onChange={e => setMedico(e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }} />
-            </label>
-            <label className="block space-y-1.5">
-              <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>
-                Data da receita
-              </span>
+            </Field>
+            <Field label="Data da receita">
               <input type="date" value={date} onChange={e => setDate(e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }} />
-            </label>
+            </Field>
           </div>
 
           {saveError && <Banner tone="warn" title="Não foi possível salvar" text={saveError} />}
@@ -318,6 +309,15 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
         </form>
       </div>
     </div>
+  );
+}
+
+function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <label className="block space-y-1.5">
+      <span className="text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--muted-foreground)' }}>{label}</span>
+      {children}
+    </label>
   );
 }
 
