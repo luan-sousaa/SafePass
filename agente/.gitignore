@@ -20,3 +20,6 @@ venv/
 .idea/
 Thumbs.db
 .DS_Store
+
+# Banco local provisório (repositories/prescription_store.py)
+*.db

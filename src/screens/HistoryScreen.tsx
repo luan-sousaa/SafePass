@@ -1,4 +1,5 @@
 import Icon from '../components/Icon';
+import { useReceitas } from '../services/prescriptions';
 
 const timeline = [
   { date: '18 set 2026', items: [
@@ -22,19 +23,30 @@ const timeline = [
   ]},
 ];
 
+const formatDate = (iso: string) =>
+  new Date(iso.slice(0, 10) + 'T00:00')
+    .toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
+    .replace(/\.| de/g, ''); // "18 de out. de 2026" → "18 out 2026", como os exemplos
+
 export default function HistoryScreen() {
+  const salvas = useReceitas().map(r => ({
+    date: formatDate(r.data_receita ?? r.criado_em),
+    items: [{ type: 'Receita', name: r.medicamentos.map(m => m.medicamento).join(', '), detail: r.medico ?? 'Médico não informado' }],
+  }));
+  const groups = [...salvas, ...timeline];
+
   return (
     <div className="space-y-2 animate-fade-in max-w-2xl">
       <p className="text-sm mb-6" style={{ color: 'var(--muted-foreground)' }}>
         Linha do tempo de prescrições, exames e consultas.
       </p>
 
-      {timeline.map((group, gi) => (
+      {groups.map((group, gi) => (
         <div key={gi} className="flex gap-4">
           {/* Timeline axis */}
           <div className="flex flex-col items-center" style={{ width: 32 }}>
             <div className="w-3 h-3 rounded-full mt-1 shrink-0" style={{ background: 'var(--primary)', border: '2px solid white', boxShadow: '0 0 0 2px var(--primary)' }} />
-            {gi < timeline.length - 1 && (
+            {gi < groups.length - 1 && (
               <div className="flex-1 w-px mt-1" style={{ background: 'var(--border)' }} />
             )}
           </div>

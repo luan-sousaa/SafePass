@@ -26,6 +26,18 @@ conversacional, porque a tela de revisão precisa de JSON, não de texto.
 - **FR-5**: A API MUST repassar `needs_manual_review`, `observacoes` e `source`
   (`"gemini"` | `"tesseract_fallback"`), para o front decidir entre tela de revisão e
   preenchimento manual. O fallback é resposta 200, não erro.
+- **FR-6** (2026-10-18): A extração MUST devolver também `medico` e `data_receita`
+  (`AAAA-MM-DD`), ambos `null` quando não estiverem legíveis, para preencher a tela de
+  revisão e o Histórico.
+- **FR-7** (2026-10-18): A API MUST expor `POST /api/prescriptions` para salvar a receita
+  que o usuário confirmou (médico, data e medicamentos já revisados) e devolver `201` com
+  o registro salvo (`id`, `criado_em`).
+- **FR-8** (2026-10-18): A API MUST expor `GET /api/prescriptions`, listando as receitas
+  salvas da mais recente para a mais antiga.
+- **FR-9** (2026-10-18): A persistência MUST ficar isolada em
+  `repositories/prescription_store.py` (`salvar`, `listar`). Hoje é SQLite (stdlib) só
+  para não bloquear o front; a frente de banco troca o corpo dessas duas funções pelo
+  PostgreSQL sem mexer na API.
 
 ## Interface / contrato
 
@@ -42,6 +54,16 @@ Content-Type: multipart/form-data   (campo: file)
   ]
 }
 400 arquivo vazio · 413 maior que 10 MB · 415 não é JPEG/PNG   (corpo: {"detail": str})
+(o 200 também traz "medico": str | null e "data_receita": "AAAA-MM-DD" | null — FR-6)
+
+POST /api/prescriptions
+{"medico": str | null, "data_receita": "AAAA-MM-DD" | null,
+ "medicamentos": [{"medicamento": str, "dose": str, "posologia": str, "periodo": str}]}  (mín. 1)
+201 {"id": int, "criado_em": str (ISO 8601), ...os campos enviados}
+422 sem medicamentos ou medicamento com nome vazio
+
+GET /api/prescriptions
+200 [ {mesmo formato do 201}, ... ]   (mais recente primeiro)
 ```
 
 Rodar (de dentro de `agents/`): `uvicorn api.main:app --reload --port 8000`
@@ -62,16 +84,25 @@ Rodar (de dentro de `agents/`): `uvicorn api.main:app --reload --port 8000`
 - **AC-5** (FR-2): Dado um PNG declarado com `Content-Type` errado, quando enviado,
   então é aceito e o serviço recebe `mime_type="image/png"`.
 
+- **AC-6** (FR-6): Dada uma extração com médico e data, quando a resposta sai, então
+  `medico` e `data_receita` vêm preenchidos.
+- **AC-7** (FR-7, FR-8): Dadas duas receitas salvas via `POST`, quando `GET` é chamado,
+  então as duas voltam, a última salva primeiro, com `id` e `criado_em`.
+
 ## Casos de borda
 
 - **EC-1** (FR-3): Arquivo vazio → 400, serviço não é chamado.
 - **EC-2** (FR-3): Arquivo com mais de 10 MB → 413, serviço não é chamado.
 - **EC-3**: Requisição sem o campo `file` → 422 (validação padrão do FastAPI).
+- **EC-4** (FR-7): `POST` sem medicamentos ou com nome de medicamento vazio → 422, nada
+  é salvo.
 
 ## Fora de escopo
 
 - **PDF**: o fallback Tesseract não lê PDF; entra numa spec futura se o squad quiser.
-- **Persistência** (salvar o que o usuário confirmou): frente de banco/API do squad.
+- **Banco definitivo** (PostgreSQL, schema normalizado, migrações): frente de banco do
+  squad — ver FR-9. Hoje os medicamentos ficam numa coluna JSON.
+- **Usuário dono da receita**: entra junto com a autenticação.
 - **Chat via orquestrador (`root_agent`)**: o front ainda não precisa; quando precisar,
   avaliar `adk api_server`.
 - **CORS e autenticação**: em dev o front usa proxy do Vite (mesma origem); auth entra

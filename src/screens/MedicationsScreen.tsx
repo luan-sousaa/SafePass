@@ -1,4 +1,5 @@
 import Icon from '../components/Icon';
+import { useReceitas } from '../services/prescriptions';
 
 const meds = [
   { name: 'Omeprazol 20mg', dose: '20 mg', freq: '1x ao dia', period: '30 dias', next: 'Hoje, 08:00', status: 'ativo' },
@@ -9,10 +10,21 @@ const meds = [
 ];
 
 export default function MedicationsScreen() {
+  const salvos = useReceitas().flatMap(r =>
+    r.medicamentos.map(m => ({
+      name: `${m.medicamento} ${m.dose}`.trim(),
+      dose: m.dose || '—',
+      freq: m.posologia || '—',
+      period: m.periodo || '—',
+      next: '—', // ponytail: sem horário da 1ª dose ainda; entra com os lembretes de verdade
+    })),
+  );
+  const all = [...salvos, ...meds];
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>{meds.length} medicamentos ativos</p>
+        <p className="text-sm" style={{ color: 'var(--muted-foreground)' }}>{all.length} medicamentos ativos</p>
         <button
           className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white"
           style={{ background: 'var(--primary)' }}
@@ -22,7 +34,7 @@ export default function MedicationsScreen() {
       </div>
 
       <div className="rounded-lg overflow-hidden" style={{ background: 'var(--card)', border: '1px solid var(--border)', boxShadow: 'var(--shadow-card)' }}>
-        {meds.map((med, i) => (
+        {all.map((med, i) => (
           <div
             key={i}
             className="p-5 transition-colors border-b last:border-b-0 hover:bg-[var(--muted)]"

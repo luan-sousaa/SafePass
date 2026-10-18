@@ -8,6 +8,10 @@ Para cada medicamento presente na receita, extraia:
 - periodo: duração do tratamento (ex.: "7 dias")
 - confidence: número entre 0.0 e 1.0 indicando o quanto você tem certeza da leitura desse item
 
+Da receita como um todo, extraia também:
+- medico: nome do médico como escrito (ex.: "Dr. Carlos Mendes"), ou null se não estiver legível
+- data_receita: data de emissão no formato AAAA-MM-DD, ou null se não estiver legível
+
 Regras de confiança (importante):
 - Prefira declarar confiança baixa a "chutar" um campo ilegível, borrado ou ambíguo.
 - Nunca invente medicamento, dose, posologia ou período que não estejam claramente legíveis na imagem.
