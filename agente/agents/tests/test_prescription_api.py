@@ -145,3 +145,28 @@ def test_rejects_prescription_without_medications_ec4(db):
     vazio = {**RECEITA, "medicamentos": [{**RECEITA["medicamentos"][0], "medicamento": " "}]}
     assert client.post("/api/prescriptions", json=vazio).status_code == 422
     assert client.get("/api/prescriptions").json() == []
+
+
+def test_lists_medications_with_schedule_ac8(db):
+    receita = client.post("/api/prescriptions", json=RECEITA).json()
+
+    meds = client.get("/api/medications").json()
+
+    assert meds == [{
+        "receita_id": receita["id"],
+        "medico": "Dr. Carlos Mendes",
+        "data_receita": "2026-09-17",
+        **RECEITA["medicamentos"][0],
+        "horarios": ["08:00", "16:00", "00:00"],
+    }]
+
+
+def test_lists_one_reminder_per_dose_time_ac9(db):
+    client.post("/api/prescriptions", json={**RECEITA, "medicamentos": [
+        {"medicamento": "Amoxicilina", "dose": "500mg", "posologia": "2x ao dia", "periodo": "7 dias"},
+        {"medicamento": "Dipirona", "dose": "500mg", "posologia": "se necessário", "periodo": ""},
+    ]})
+
+    lembretes = client.get("/api/reminders").json()
+
+    assert [(r["medicamento"], r["horario"]) for r in lembretes] == [("Amoxicilina", "08:00"), ("Amoxicilina", "20:00")]

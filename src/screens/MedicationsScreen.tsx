@@ -1,5 +1,5 @@
 import Icon from '../components/Icon';
-import { useReceitas } from '../services/prescriptions';
+import { useMedicamentos } from '../services/prescriptions';
 
 const meds = [
   { name: 'Omeprazol 20mg', dose: '20 mg', freq: '1x ao dia', period: '30 dias', next: 'Hoje, 08:00', status: 'ativo' },
@@ -10,15 +10,13 @@ const meds = [
 ];
 
 export default function MedicationsScreen() {
-  const salvos = useReceitas().flatMap(r =>
-    r.medicamentos.map(m => ({
-      name: `${m.medicamento} ${m.dose}`.trim(),
-      dose: m.dose || '—',
-      freq: m.posologia || '—',
-      period: m.periodo || '—',
-      next: '—', // ponytail: sem horário da 1ª dose ainda; entra com os lembretes de verdade
-    })),
-  );
+  const salvos = useMedicamentos().map(m => ({
+    name: `${m.medicamento} ${m.dose}`.trim(),
+    dose: m.dose || '—',
+    freq: m.posologia || '—',
+    period: m.periodo || '—',
+    next: m.horarios.join(' · ') || 'Conforme necessário',
+  }));
   const all = [...salvos, ...meds];
 
   return (

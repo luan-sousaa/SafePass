@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field, StringConstraints
 
 from config.confidence_config import CONFIDENCE_THRESHOLD
 from repositories import prescription_store
+from services.prescription.dose_schedule import horarios
 from services.prescription.extraction_service import extract_prescription
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024
@@ -51,6 +52,24 @@ class ReceitaOut(ReceitaIn):
     criado_em: str
 
 
+class MedicamentoSalvoOut(BaseModel):
+    receita_id: int
+    medico: Optional[str]
+    data_receita: Optional[str]
+    medicamento: str
+    dose: str
+    posologia: str
+    periodo: str
+    horarios: list[str]
+
+
+class LembreteOut(BaseModel):
+    medicamento: str
+    dose: str
+    periodo: str
+    horario: str
+
+
 app = FastAPI(title="SAFEpass — API de extração de receitas")
 
 
@@ -92,3 +111,17 @@ def save(receita: ReceitaIn) -> dict:
 @app.get("/api/prescriptions", response_model=list[ReceitaOut])
 def list_saved() -> list[dict]:
     return prescription_store.listar()
+
+
+@app.get("/api/medications", response_model=list[MedicamentoSalvoOut])
+def list_medications() -> list[dict]:
+    return [
+        {"receita_id": r["id"], "medico": r["medico"], "data_receita": r["data_receita"], **m, "horarios": horarios(m["posologia"])}
+        for r in prescription_store.listar()
+        for m in r["medicamentos"]
+    ]
+
+
+@app.get("/api/reminders", response_model=list[LembreteOut])
+def list_reminders() -> list[dict]:
+    return [{**m, "horario": h} for m in list_medications() for h in m["horarios"]]
