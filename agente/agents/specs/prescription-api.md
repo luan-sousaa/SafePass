@@ -38,6 +38,17 @@ conversacional, porque a tela de revisão precisa de JSON, não de texto.
   `repositories/prescription_store.py` (`salvar`, `listar`). Hoje é SQLite (stdlib) só
   para não bloquear o front; a frente de banco troca o corpo dessas duas funções pelo
   PostgreSQL sem mexer na API.
+- **FR-10** (2026-10-23): A API MUST expor `GET /api/medications`, com cada medicamento
+  das receitas salvas (mais recente primeiro), junto com `receita_id`, `medico`,
+  `data_receita` e `horarios` (lista `"HH:MM"`, ver FR-12).
+- **FR-11** (2026-10-23): A API MUST expor `GET /api/reminders`, com um lembrete por
+  horário de cada medicamento (`medicamento`, `dose`, `periodo`, `horario`). Medicamento
+  sem horário calculável não gera lembrete.
+- **FR-12** (2026-10-23): Os horários MUST ser calculados (automação, não predição) a
+  partir da posologia **confirmada pelo usuário**, começando às 08:00: `8/8h` ou
+  `a cada 8 horas` → intervalo de 8 h; `3x ao dia`/`três vezes ao dia` → 24 h ÷ 3.
+  Posologia condicional (`se necessário`, `se dor`, `SOS`) ou sem frequência
+  reconhecível MUST devolver `horarios: []` — o sistema não inventa horário.
 
 ## Interface / contrato
 
@@ -64,6 +75,14 @@ POST /api/prescriptions
 
 GET /api/prescriptions
 200 [ {mesmo formato do 201}, ... ]   (mais recente primeiro)
+
+GET /api/medications
+200 [ {"receita_id": int, "medico": str | null, "data_receita": str | null,
+       "medicamento": str, "dose": str, "posologia": str, "periodo": str,
+       "horarios": ["08:00", "16:00", "00:00"]}, ... ]
+
+GET /api/reminders
+200 [ {"medicamento": str, "dose": str, "periodo": str, "horario": "HH:MM"}, ... ]
 ```
 
 Rodar (de dentro de `agents/`): `uvicorn api.main:app --reload --port 8000`
@@ -89,6 +108,13 @@ Rodar (de dentro de `agents/`): `uvicorn api.main:app --reload --port 8000`
 - **AC-7** (FR-7, FR-8): Dadas duas receitas salvas via `POST`, quando `GET` é chamado,
   então as duas voltam, a última salva primeiro, com `id` e `criado_em`.
 
+- **AC-8** (FR-10, FR-12): Dada uma receita salva com `1 cp 8/8h`, quando `GET
+  /api/medications` é chamado, então o medicamento volta com `receita_id` e
+  `horarios = ["08:00", "16:00", "00:00"]`.
+- **AC-9** (FR-11): Dada uma receita com um medicamento `2x ao dia` e outro `se
+  necessário`, quando `GET /api/reminders` é chamado, então voltam 2 lembretes (08:00 e
+  20:00), ambos do primeiro medicamento.
+
 ## Casos de borda
 
 - **EC-1** (FR-3): Arquivo vazio → 400, serviço não é chamado.
@@ -96,6 +122,8 @@ Rodar (de dentro de `agents/`): `uvicorn api.main:app --reload --port 8000`
 - **EC-3**: Requisição sem o campo `file` → 422 (validação padrão do FastAPI).
 - **EC-4** (FR-7): `POST` sem medicamentos ou com nome de medicamento vazio → 422, nada
   é salvo.
+- **EC-5** (FR-12): Posologia vazia, condicional (`1 cp 6/6h se dor`) ou com intervalo
+  que não cabe em 24 h (`a cada 0 horas`, `a cada 36 horas`) → `horarios: []`.
 
 ## Fora de escopo
 

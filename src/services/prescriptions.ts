@@ -26,6 +26,15 @@ export type ReceitaIn = {
 
 export type Receita = ReceitaIn & { id: number; criado_em: string };
 
+export type MedicamentoSalvo = Omit<Medicamento, 'precisa_revisar'> & {
+  receita_id: number;
+  medico: string | null;
+  data_receita: string | null;
+  horarios: string[]; // "HH:MM", calculados da posologia; vazio se não der pra calcular
+};
+
+export type Lembrete = { medicamento: string; dose: string; periodo: string; horario: string };
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
@@ -61,11 +70,16 @@ export function savePrescription(receita: ReceitaIn): Promise<Receita> {
   });
 }
 
-/** Receitas salvas, mais recente primeiro. Lista vazia enquanto carrega ou se a API estiver fora. */
-export function useReceitas(): Receita[] {
-  const [receitas, setReceitas] = useState<Receita[]>([]);
+/** GET de uma lista da API. Lista vazia enquanto carrega ou se a API estiver fora. */
+function useList<T>(path: string): T[] {
+  const [items, setItems] = useState<T[]>([]);
   useEffect(() => {
-    request<Receita[]>('/api/prescriptions').then(setReceitas, () => {});
-  }, []);
-  return receitas;
+    request<T[]>(path).then(setItems, () => {});
+  }, [path]);
+  return items;
 }
+
+/** Receitas salvas, mais recente primeiro. */
+export const useReceitas = () => useList<Receita>('/api/prescriptions');
+export const useMedicamentos = () => useList<MedicamentoSalvo>('/api/medications');
+export const useLembretes = () => useList<Lembrete>('/api/reminders');

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import Icon from '../components/Icon';
-import { useReceitas } from '../services/prescriptions';
+import { useLembretes } from '../services/prescriptions';
 
 const reminders = [
   { time: '08:00', label: 'Omeprazol 20mg', type: 'Medicamento', days: 'Diário', color: '#0d9488', active: true },
@@ -13,21 +13,19 @@ const reminders = [
 
 export default function RemindersScreen() {
   const [items, setItems] = useState(reminders);
-  const receitas = useReceitas();
+  const lembretes = useLembretes();
 
   useEffect(() => {
-    const salvos = receitas.flatMap(r =>
-      r.medicamentos.map(m => ({
-        time: '08:00', // ponytail: horário fixo até o usuário poder escolher a 1ª dose
-        label: `${m.medicamento} ${m.dose}`.trim(),
-        type: 'Medicamento',
-        days: [m.posologia, m.periodo].filter(Boolean).join(' · ') || 'Diário',
-        color: '#0d9488',
-        active: true,
-      })),
-    );
+    const salvos = lembretes.map(l => ({
+      time: l.horario,
+      label: `${l.medicamento} ${l.dose}`.trim(),
+      type: 'Medicamento',
+      days: l.periodo ? `Diário por ${l.periodo}` : 'Diário',
+      color: '#0d9488',
+      active: true,
+    }));
     setItems(prev => [...salvos, ...prev]);
-  }, [receitas]);
+  }, [lembretes]);
 
   return (
     <div className="space-y-6 animate-fade-in">

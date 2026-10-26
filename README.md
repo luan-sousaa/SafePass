@@ -82,7 +82,11 @@ A área de medicamentos permite acompanhar os tratamentos registrados, apresenta
 - dosagem;
 - frequência;
 - período de utilização;
-- próxima dose.
+- horários das doses do dia.
+
+Os horários são **calculados a partir da posologia confirmada** pelo usuário: "8/8h" gera
+doses às 08:00, 16:00 e 00:00, e "2x ao dia" às 08:00 e 20:00. Posologia condicional
+("se necessário", "SOS") não gera horário: o sistema não inventa dose.
 
 ### Lembretes
 
@@ -92,7 +96,8 @@ Permite acompanhar e controlar lembretes relacionados à saúde, incluindo:
 - consultas;
 - vacinas.
 
-Os lembretes podem ser ativados ou desativados conforme a necessidade do usuário.
+Os lembretes de medicamento são gerados automaticamente, um por horário de dose, a partir
+das receitas salvas. Eles podem ser ativados ou desativados conforme a necessidade do usuário.
 
 ### Dependentes
 
@@ -221,7 +226,29 @@ cd SafePass-main
 npm install
 ```
 
-### 3. Inicie o ambiente de desenvolvimento
+### 3. Suba a API (OCR, receitas, medicamentos e lembretes)
+
+De dentro de `agente/agents/`, com um `.env` contendo `GOOGLE_API_KEY`:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+.venv/bin/uvicorn api.main:app --reload --port 8000
+```
+
+O front acessa a API por `/api` (proxy do Vite para a porta 8000).
+
+| Rota | O que faz |
+|---|---|
+| `POST /api/prescriptions/extract` | Foto da receita → medicamentos extraídos |
+| `POST /api/prescriptions` | Salva a receita confirmada |
+| `GET /api/prescriptions` | Lista as receitas salvas |
+| `GET /api/medications` | Medicamentos salvos com os horários das doses |
+| `GET /api/reminders` | Um lembrete por horário de dose |
+
+Contrato completo em `agente/agents/specs/prescription-api.md`. Testes:
+`cd agente/agents && .venv/bin/pytest`.
+
+### 4. Inicie o ambiente de desenvolvimento
 
 ```bash
 npm run dev
@@ -295,4 +322,10 @@ Em uma implantação real, mecanismos adicionais de segurança devem ser impleme
 
 **Em desenvolvimento.**
 
-As interfaces e os
+Já funcionam com dados reais: leitura de receitas por OCR (Gemini, com fallback
+Tesseract), revisão e salvamento, e as telas de Medicamentos, Histórico e Lembretes a
+partir das receitas salvas. Exames, consultas, vacinas, dependentes, perfil e o Assistente
+IA ainda usam dados de exemplo.
+
+O acompanhamento da devolutiva da entrega parcial está em
+[`docs/devolutiva-entrega-parcial.md`](docs/devolutiva-entrega-parcial.md).
