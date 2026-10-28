@@ -21,6 +21,7 @@ export type Extracao = {
 
 export type ReceitaIn = {
   documento_ocr_id: number | null; // null = preenchimento manual
+  dependente_id: number | null; // dono da receita; null = o próprio usuário
   medico: string | null;
   data_receita: string | null;
   medicamentos: Omit<Medicamento, 'precisa_revisar'>[];

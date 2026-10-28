@@ -30,6 +30,8 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
   const [items, setItems] = useState<Medicamento[]>([emptyItem]);
   const [date, setDate] = useState('');
   const [medico, setMedico] = useState('');
+  const [dono, setDono] = useState('');
+  const dependentes = useDependentes();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
@@ -81,6 +83,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
     setItems([emptyItem]);
     setMedico('');
     setDate('');
+    setDono('');
     setStep('choose');
   };
 
@@ -93,6 +96,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
         documento_ocr_id: documentoOcrId,
         medico: medico.trim() || null,
         data_receita: date || null,
+        dependente_id: dono ? Number(dono) : null,
         medicamentos: items.map(({ precisa_revisar: _, ...item }) => item),
       });
       navigate('medications');
@@ -306,10 +310,12 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
             </Field>
           </div>
 
-          {/* POST /api/prescriptions ainda não recebe dependente_id: a receita entra no nome do usuário. */}
-          <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
-            A receita fica no seu nome. Se for de um dependente, troque o dono em Documentos depois de salvar.
-          </p>
+          <Field label="De quem é">
+            <select value={dono} onChange={e => setDono(e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }}>
+              <option value="">Minha</option>
+              {dependentes.map(d => <option key={d.id} value={d.id}>{d.nome} ({d.parentesco})</option>)}
+            </select>
+          </Field>
 
           {saveError && <Banner tone="warn" title="Não foi possível salvar" text={saveError} />}
 
