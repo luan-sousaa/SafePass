@@ -6,6 +6,7 @@ import HomeScreen from './screens/HomeScreen';
 import DocumentsScreen from './screens/DocumentsScreen';
 import AddDocumentScreen from './screens/AddDocumentScreen';
 import MedicationsScreen from './screens/MedicationsScreen';
+import VaccinesScreen from './screens/VaccinesScreen';
 import RemindersScreen from './screens/RemindersScreen';
 import DependentsScreen from './screens/DependentsScreen';
 import HistoryScreen from './screens/HistoryScreen';
@@ -38,6 +39,7 @@ export default function App() {
             {screen === 'documents' && <DocumentsScreen navigate={navigate} />}
             {screen === 'add-document' && <AddDocumentScreen key={addDocumentKey} navigate={navigate} />}
             {screen === 'medications' && <MedicationsScreen />}
+            {screen === 'vaccines' && <VaccinesScreen />}
             {screen === 'reminders' && <RemindersScreen />}
             {screen === 'dependents' && <DependentsScreen />}
             {screen === 'history' && <HistoryScreen />}

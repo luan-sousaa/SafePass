@@ -65,7 +65,7 @@ só a conclusão em linguagem natural)
 | `apps/receita_ocr_app/` | `agent.py` (o `root_agent`, único agente ADK) |
 | `tools/` | `extract_prescription.py` — a ferramenta ADK chamada pelo orquestrador |
 | `services/prescription/` | `extraction_service.py` — chamada direta ao Gemini + schemas Pydantic (`MedicationItem`, `PrescriptionExtraction`, `ExtractionResult`); `dose_schedule.py` — horários das doses a partir da posologia confirmada |
-| `api/` | `main.py` — API HTTP (FastAPI) consumida pelo front; `documentos.py` — documentos e dependentes; `deps.py` — usuário atual e leitura de upload |
+| `api/` | `main.py` — API HTTP (FastAPI) consumida pelo front; `documentos.py` — documentos e dependentes; `saude.py` — medicamentos, lembretes e vacinas; `deps.py` — usuário atual e leitura de upload |
 | `prompts/` | `orchestrator_prompt.py` (como o agente conversa com o usuário) e `extract_prescription_prompt.py` (instrução da chamada de extração — não fala com o usuário) |
 | `security/` | `review_guard.py` — HITL como segurança: detecta prompt injection e força revisão manual, sem confiar no self-report de confiança do modelo |
 | `callbacks/` | `review_guard_callback.py` — captura a imagem anexada (via Artifact) e propaga o sinal de revisão manual pro state da sessão |
@@ -144,7 +144,10 @@ Contrato completo em `specs/prescription-api.md`:
 - `POST /api/prescriptions/extract` — foto da receita (multipart, campo `file`, JPG/PNG até 10 MB) → medicamentos extraídos
 - `POST /api/prescriptions` / `GET /api/prescriptions` — salva e lista as receitas confirmadas
 - `GET /api/medications` — medicamentos salvos com `horarios` calculados da posologia
-- `GET /api/reminders` — um lembrete por horário de dose
+- `GET /api/reminders` — um lembrete por horário de dose dos medicamentos ativos e um por
+  próxima dose de vacina
+- `POST /api/medications`, `PATCH /api/medications/{id}` e `/api/vacinas` — cadastro manual
+  de medicamentos e de vacinas (`specs/medicamentos-vacinas.md`)
 - `/api/documentos` e `/api/dependentes` — repositório documental por usuário/dependente;
   `GET /api/assistente/contexto` — só o que o usuário compartilhou com o assistente
   (`specs/repositorio-documentos.md`, contrato em `docs/contrato-assistente-ia.md` na raiz)

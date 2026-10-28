@@ -16,7 +16,7 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
   // Os lembretes são horários diários: os que já passaram hoje voltam amanhã.
   const agora = new Date().toTimeString().slice(0, 5);
   const upcomingReminders = lembretes
-    .map(l => ({ ...l, amanha: l.horario <= agora }))
+    .flatMap(l => (l.horario ? [{ ...l, horario: l.horario, amanha: l.horario <= agora }] : [])) // vacina não tem hora
     .sort((a, b) => Number(a.amanha) - Number(b.amanha) || a.horario.localeCompare(b.horario))
     .slice(0, 4);
 

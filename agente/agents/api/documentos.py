@@ -88,7 +88,7 @@ def apagar_dependente(dependente_id: int, usuario_id: UsuarioAtual) -> None:
     try:
         apagado = documento_store.apagar_dependente(usuario_id, dependente_id)
     except documento_store.DependenteComDocumentos:
-        raise HTTPException(409, "Este dependente tem documentos. Mova ou apague os documentos antes.")
+        raise HTTPException(409, "Este dependente tem documentos, medicamentos ou vacinas. Mova ou apague esses registros antes.")
     if not apagado:
         raise _nao_encontrado("Dependente")
 

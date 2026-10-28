@@ -17,10 +17,8 @@ function ler(): Record<string, boolean> {
 let ligados = ler(); // memória primeiro: sem localStorage (aba privada), o liga/desliga vale até recarregar
 
 /** Mesma chave para a tela de Lembretes e para o agendador dos avisos. */
-export const chaveLembrete = (label: string, horario: string, dias: string) => `${label} ${horario} ${dias}`;
-
 export const chaveDoLembrete = (l: Lembrete) =>
-  chaveLembrete(`${l.medicamento} ${l.dose}`.trim(), l.horario, l.periodo ? `Diário por ${l.periodo}` : 'Diário');
+  [l.tipo, `${l.medicamento} ${l.dose}`.trim(), l.horario ?? l.data, l.periodo, l.dependente_id ?? ''].join(' ');
 
 export function useLembretesLigados() {
   const [estado, setEstado] = useState(ligados);

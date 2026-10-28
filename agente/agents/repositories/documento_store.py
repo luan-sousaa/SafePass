@@ -6,7 +6,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
-from repositories.database import caminho, connect
+from repositories.database import atualizar, caminho, connect
 
 # Toda consulta filtra por usuario_id: recurso de outro usuário é tratado como inexistente
 # (spec repositorio-documentos, FR-2).
@@ -15,7 +15,7 @@ _EXTENSOES = {"image/jpeg": ".jpg", "image/png": ".png", "application/pdf": ".pd
 
 
 class DependenteComDocumentos(Exception):
-    """O dependente ainda tem documentos ligados a ele."""
+    """O dependente ainda tem documentos, medicamentos ou vacinas ligados a ele."""
 
 
 def _pasta_arquivos() -> str:
@@ -34,19 +34,6 @@ def guardar_arquivo(conteudo: bytes, mime_type: str) -> str:
 
 def caminho_arquivo(nome: str) -> str:
     return os.path.join(_pasta_arquivos(), nome)
-
-
-def _atualizar(tabela: str, usuario_id: str, id: int, campos: dict) -> bool:
-    """UPDATE parcial; as chaves de `campos` vêm dos modelos da API, não do cliente."""
-    if not campos:
-        with connect() as conn:
-            return conn.execute(f"SELECT 1 FROM {tabela} WHERE id = ? AND usuario_id = ?", (id, usuario_id)).fetchone() is not None
-    with connect() as conn:
-        cur = conn.execute(
-            f"UPDATE {tabela} SET {', '.join(f'{campo} = ?' for campo in campos)} WHERE id = ? AND usuario_id = ?",
-            (*campos.values(), id, usuario_id),
-        )
-    return cur.rowcount > 0
 
 
 # Dependentes
@@ -73,14 +60,14 @@ def criar_dependente(usuario_id: str, dependente: dict) -> dict:
 
 
 def atualizar_dependente(usuario_id: str, dependente_id: int, campos: dict) -> Optional[dict]:
-    return buscar_dependente(usuario_id, dependente_id) if _atualizar("dependente", usuario_id, dependente_id, campos) else None
+    return buscar_dependente(usuario_id, dependente_id) if atualizar("dependente", usuario_id, dependente_id, campos) else None
 
 
 def apagar_dependente(usuario_id: str, dependente_id: int) -> bool:
     try:
         with connect() as conn:
             cur = conn.execute("DELETE FROM dependente WHERE id = ? AND usuario_id = ?", (dependente_id, usuario_id))
-    except sqlite3.IntegrityError:  # chave estrangeira de documento.dependente_id
+    except sqlite3.IntegrityError:  # chave estrangeira de documento, medicamento ou vacina
         raise DependenteComDocumentos(dependente_id)
     return cur.rowcount > 0
 
@@ -152,7 +139,7 @@ def criar_documento(usuario_id: str, documento: dict) -> dict:
 
 
 def atualizar_documento(usuario_id: str, documento_id: int, campos: dict) -> Optional[dict]:
-    return buscar_documento(usuario_id, documento_id) if _atualizar("documento", usuario_id, documento_id, campos) else None
+    return buscar_documento(usuario_id, documento_id) if atualizar("documento", usuario_id, documento_id, campos) else None
 
 
 def apagar_documento(usuario_id: str, documento_id: int) -> bool:

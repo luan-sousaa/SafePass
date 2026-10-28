@@ -18,6 +18,8 @@ assistente a analisar. Spec completa: `agente/agents/specs/repositorio-documento
 - `GET /api/assistente/contexto` devolve **só** documentos compartilhados, e só os
   medicamentos e lembretes de receitas compartilhadas. Nada de documento não
   compartilhado aparece, nem derivado.
+- Vacina tem o próprio `compartilhado_assistente` (pode não ter documento ligado), também
+  começando `false` (`PATCH /api/vacinas/{id}`).
 - Recurso de outro usuário responde 404, como se não existisse.
 
 ## Rota para o assistente
@@ -28,45 +30,24 @@ dos dependentes).
 `GET /api/assistente/contexto?dependente_id=1` — só os do dependente 1 (404 se não for
 dependente do usuário).
 
-Resposta real (usuário `dev` com uma receita lida pelo OCR, uma vacina do filho e um
-exame **não** compartilhado, que não aparece):
+Resposta real (usuário `dev` com uma receita compartilhada lida pelo OCR e uma vacina
+compartilhada do filho; uma vacina **não** compartilhada não aparece):
 
 ```json
 {
   "documentos": [
-    {
-      "id": 1,
-      "tipo": "receita",
-      "titulo": "Amoxicilina",
-      "data_documento": "2026-09-17",
-      "dono": { "tipo": "usuario", "id": "dev" },
-      "dados": {
-        "medico": "Dr. Carlos Mendes",
-        "data_receita": "2026-09-17",
-        "medicamentos": [
-          { "medicamento": "Amoxicilina", "dose": "500mg", "posologia": "1 cápsula de 12/12h", "periodo": "7 dias" }
-        ]
-      }
-    },
-    {
-      "id": 2,
-      "tipo": "vacina",
-      "titulo": "Influenza 2026",
-      "data_documento": "2026-09-02",
-      "dono": { "tipo": "dependente", "id": 1, "nome": "Pedro Souza", "parentesco": "Filho" },
-      "dados": null
-    }
+    {"id": 1, "tipo": "receita", "titulo": "Amoxicilina", "data_documento": "2026-10-27", "dono": {"tipo": "usuario", "id": "dev"}, "dados": {"medico": "Dr. Carlos Mendes", "data_receita": "2026-10-27", "medicamentos": [{"medicamento": "Amoxicilina", "dose": "500mg", "posologia": "1 cápsula de 12/12h", "periodo": "7 dias"}]}}
   ],
   "medicamentos": [
-    {
-      "receita_id": 1, "medico": "Dr. Carlos Mendes", "data_receita": "2026-09-17",
-      "medicamento": "Amoxicilina", "dose": "500mg", "posologia": "1 cápsula de 12/12h", "periodo": "7 dias",
-      "horarios": ["08:00", "20:00"]
-    }
+    {"id": null, "origem": "receita", "receita_id": 1, "medico": "Dr. Carlos Mendes", "data_receita": "2026-10-27", "medicamento": "Amoxicilina", "dose": "500mg", "posologia": "1 cápsula de 12/12h", "periodo": "7 dias", "horarios": ["08:00", "20:00"], "dependente_id": null, "inicio": "2026-10-27", "duracao_dias": 7, "encerrado_em": null, "ativo": true}
   ],
   "lembretes": [
-    { "medicamento": "Amoxicilina", "dose": "500mg", "periodo": "7 dias", "horario": "08:00" },
-    { "medicamento": "Amoxicilina", "dose": "500mg", "periodo": "7 dias", "horario": "20:00" }
+    {"tipo": "medicamento", "medicamento": "Amoxicilina", "dose": "500mg", "periodo": "7 dias", "horario": "08:00", "data": null, "dependente_id": null},
+    {"tipo": "medicamento", "medicamento": "Amoxicilina", "dose": "500mg", "periodo": "7 dias", "horario": "20:00", "data": null, "dependente_id": null},
+    {"tipo": "vacina", "medicamento": "Hepatite B", "dose": "1ª dose", "periodo": "", "horario": null, "data": "2026-11-02", "dependente_id": 1}
+  ],
+  "vacinas": [
+    {"nome": "Hepatite B", "dose": "1ª dose", "data_aplicacao": "2026-09-28", "proxima_dose": "2026-11-02", "dependente_id": 1, "documento_id": null, "compartilhado_assistente": true, "id": 1, "criado_em": "2026-10-28T23:01:00.070254+00:00"}
   ]
 }
 ```
@@ -75,6 +56,13 @@ exame **não** compartilhado, que não aparece):
   receita tem; os outros tipos vêm `null`.
 - `horarios`: calculados da posologia confirmada, a partir das 08:00. Posologia
   condicional ("se necessário") não gera horário.
+- `ativo`: o medicamento já começou, não foi encerrado e o período não venceu
+  (`inicio` + `duracao_dias`; receita sem número de dias = contínuo). Só ativos geram
+  lembrete.
+- `lembretes`: `tipo` `medicamento` (com `horario` do dia) ou `vacina` (com `data` da
+  próxima dose e `horario` nulo; o nome da vacina vem em `medicamento`).
+- `vacinas`: `nome`, `dose`, `data_aplicacao`, `proxima_dose`, `dependente_id` (nulo = do
+  usuário), `documento_id` opcional. Spec: `agente/agents/specs/medicamentos-vacinas.md`.
 
 ## Modelo
 
@@ -106,6 +94,7 @@ com esse `dono`.
 | `GET /api/documentos/{id}` | Um documento (mesmo formato da tabela) |
 | `GET /api/documentos/{id}/arquivo` | O arquivo original, se o assistente precisar ler a imagem/PDF |
 | `GET /api/dependentes` | Lista de dependentes |
+| `GET /api/vacinas/{id}` | Uma vacina (o contexto já traz as compartilhadas) |
 
 O assistente **não** deve usar `GET /api/documentos` (lista tudo, inclusive o que não foi
 compartilhado): ela é para as telas do próprio usuário.
@@ -113,8 +102,8 @@ compartilhado): ela é para as telas do próprio usuário.
 ## O que ainda não existe
 
 - Login de verdade (JWT): hoje é o header de dev.
-- Medicamentos "ativos" pelo período e "próximos" lembretes pelo relógio: hoje vêm todos
-  os medicamentos das receitas compartilhadas, com os horários do dia.
+- Medicamentos cadastrados à mão no contexto: ainda não têm consentimento próprio, então
+  não entram.
 - Dados estruturados de exame, consulta, vacina e atestado (só receita passa por OCR).
 - Histórico do chat: a API não guarda conversas. Se o assistente precisar, combinamos
   rota e tabela.

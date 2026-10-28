@@ -257,8 +257,10 @@ O front acessa a API por `/api` (proxy do Vite para a porta 8000).
 | `POST /api/prescriptions/extract` | Foto da receita → medicamentos extraídos |
 | `POST /api/prescriptions` | Salva a receita confirmada |
 | `GET /api/prescriptions` | Lista as receitas salvas |
-| `GET /api/medications` | Medicamentos salvos com os horários das doses |
-| `GET /api/reminders` | Um lembrete por horário de dose |
+| `GET /api/medications` | Medicamentos (da receita e manuais) com horários e se estão ativos |
+| `POST /api/medications`, `PATCH /api/medications/{id}` | Cadastra, edita e encerra medicamento manual |
+| `GET /api/reminders` | Doses do dia dos medicamentos ativos e próximas doses de vacinas |
+| `/api/vacinas` | Registro e consulta de vacinas por dono |
 | `/api/documentos`, `/api/dependentes` | Repositório documental por usuário e dependente |
 | `GET /api/assistente/contexto` | Documentos compartilhados com o assistente IA |
 

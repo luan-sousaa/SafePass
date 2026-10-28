@@ -38,6 +38,7 @@ export default function Alertas() {
 
       const { lembretes, ligados } = atual.current;
       for (const l of lembretes) {
+        if (!l.horario) continue; // vacina: lembrete por data, sem hora para avisar
         const m = minutos(l.horario);
         if (desde < m && m <= agora && (ligados[chaveDoLembrete(l)] ?? true)) avisar(l);
       }

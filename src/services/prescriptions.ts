@@ -29,14 +29,30 @@ export type ReceitaIn = {
 
 export type Receita = ReceitaIn & { id: number; criado_em: string };
 
+// Contrato: agente/agents/specs/medicamentos-vacinas.md
 export type MedicamentoSalvo = Omit<Medicamento, 'precisa_revisar'> & {
-  receita_id: number;
+  id: number | null; // só no manual
+  origem: 'receita' | 'manual';
+  receita_id: number | null;
   medico: string | null;
   data_receita: string | null;
   horarios: string[]; // "HH:MM", calculados da posologia; vazio se não der pra calcular
+  dependente_id: number | null;
+  inicio: string; // AAAA-MM-DD
+  duracao_dias: number | null; // null = contínuo
+  encerrado_em: string | null;
+  ativo: boolean;
 };
 
-export type Lembrete = { medicamento: string; dose: string; periodo: string; horario: string };
+export type Lembrete = {
+  tipo: 'medicamento' | 'vacina';
+  medicamento: string; // nome do medicamento ou da vacina
+  dose: string;
+  periodo: string;
+  horario: string | null; // null em vacina
+  data: string | null; // próxima dose da vacina
+  dependente_id: number | null;
+};
 
 // ponytail: usuário fixo só para dev. Quando o login do outro grupo existir, aqui vira
 // `Authorization: Bearer <token>` (spec repositorio-documentos, FR-1).
@@ -85,10 +101,7 @@ export function savePrescription(receita: ReceitaIn): Promise<Receita> {
   });
 }
 
-/**
- * GET de uma lista da API. Lista vazia enquanto carrega ou se a API estiver fora.
- * Mudar `versao` busca de novo (ex.: depois de editar ou apagar um item).
- */
+/** GET de uma lista da API. Lista vazia enquanto carrega ou se a API estiver fora. Mude `versao` para recarregar. */
 export function useList<T>(path: string, versao = 0): T[] {
   const [items, setItems] = useState<T[]>([]);
   useEffect(() => {
@@ -99,5 +112,5 @@ export function useList<T>(path: string, versao = 0): T[] {
 
 /** Receitas salvas, mais recente primeiro. */
 export const useReceitas = () => useList<Receita>('/api/prescriptions');
-export const useMedicamentos = () => useList<MedicamentoSalvo>('/api/medications');
+export const useMedicamentos = (versao = 0) => useList<MedicamentoSalvo>('/api/medications', versao);
 export const useLembretes = () => useList<Lembrete>('/api/reminders');
