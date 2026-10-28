@@ -53,7 +53,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
   } catch (err) {
     throw new Error(
-      err instanceof DOMException && err.name === 'TimeoutError'
+      // Safari rejeita o AbortSignal.timeout com AbortError em vez de TimeoutError.
+      err instanceof DOMException && (err.name === 'TimeoutError' || err.name === 'AbortError')
         ? 'O serviço demorou demais para responder. Tente novamente.'
         : 'Não foi possível conectar ao serviço. Verifique sua conexão.',
     );

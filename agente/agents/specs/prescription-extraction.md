@@ -61,6 +61,14 @@ passo só) em vez de OCR tradicional + regras, que erra muito com letra manuscri
   (nível WARNING, com o traceback) a exceção que causou a queda. Motivo (validação de
   2026-10-16): o fallback engolia o erro em silêncio, e um 429 de cota e a falta do
   pacote de idioma `por` do Tesseract só foram descobertos rodando o código na mão.
+- **FR-10** (2026-10-28): A chamada de extração ao Gemini MUST ter tempo máximo por
+  tentativa (`GEMINI_EXTRACTION_TIMEOUT_MS`, 10 s) e número de tentativas próprio
+  (`GEMINI_EXTRACTION_ATTEMPTS`, 2), de forma que o pior caso (todas as tentativas
+  estourando + esperas do backoff) fique em até 25 s e o fallback Tesseract (FR-4)
+  responda bem antes dos 60 s em que o front desiste. Motivo (teste ponta a ponta de
+  2026-10-26): com o Gemini em 503 "high demand", cada tentativa demorava ~20 s para
+  falhar, as 3 tentativas somavam ~60 s e o front abortava antes do fallback chegar. O
+  orquestrador (`root_agent`) continua com o retry do client (FR-7), sem esse limite.
 
 ## Interface / contrato
 
@@ -128,6 +136,13 @@ def apply_hitl_guard(extraction: PrescriptionExtraction) -> tuple[bool, list[str
 - **AC-11** (FR-9): Dado que o Gemini e o Tesseract falham, quando
   `extract_prescription` é chamado, então são registrados dois WARNINGs no logger do
   serviço, cada um com a exceção correspondente (`exc_info`).
+- **AC-12** (FR-10): Com os valores padrão de `config/gemini_config.py`, a soma de
+  `GEMINI_EXTRACTION_ATTEMPTS × GEMINI_EXTRACTION_TIMEOUT_MS` com a espera máxima do
+  backoff entre as tentativas é de no máximo 25 s.
+- **AC-13** (FR-10): Dado um servidor Gemini que demora mais que o timeout para
+  responder (ou que responde 503), quando `extract_prescription` é chamado, então cada
+  tentativa é cortada no timeout, são feitas exatamente `GEMINI_EXTRACTION_ATTEMPTS`
+  tentativas e o resultado vem do fallback (`source="tesseract_fallback"`).
 
 ## Casos de borda
 

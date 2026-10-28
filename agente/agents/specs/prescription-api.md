@@ -56,6 +56,14 @@ conversacional, porque a tela de revisão precisa de JSON, não de texto.
 - **FR-14** (2026-10-28): Toda rota MUST exigir o usuário (`X-Usuario-Id` em dev, 401 sem
   ele) e receitas, medicamentos e lembretes MUST ser só do usuário atual. Detalhes na
   spec `repositorio-documentos`, FR-1/FR-2.
+- **FR-15** (2026-10-28): Posologias sem intervalo, mas com momento do dia ou dose diária
+  única, MUST gerar horário fixo: `pela manhã` → 08:00; `à noite`, `pela noite` e `ao
+  deitar` → 20:00 (o mesmo horário da 2ª dose de `12/12h`, para não espalhar lembretes);
+  `1 cp ao dia`/`por dia` sem número de vezes → uma dose às 08:00. Manhã e noite na mesma
+  posologia geram os dois horários. Intervalo (`8/8h`) e `Nx ao dia` continuam tendo
+  prioridade; o momento do dia vem antes de `1x ao dia` (`1x ao dia à noite` → 20:00).
+  Motivo (teste ponta a ponta de 2026-10-26): `Tomar 01 comprimido pela noite` voltava
+  `[]` e a tela mostrava "Conforme necessário", como se fosse uso SOS.
 
 ## Interface / contrato
 
@@ -124,6 +132,10 @@ Rodar (de dentro de `agents/`): `uvicorn api.main:app --reload --port 8000`
 - **AC-9** (FR-11): Dada uma receita com um medicamento `2x ao dia` e outro `se
   necessário`, quando `GET /api/reminders` é chamado, então voltam 2 lembretes (08:00 e
   20:00), ambos do primeiro medicamento.
+- **AC-10** (FR-15): `1 cp ao dia` → `["08:00"]`; `1 comprimido pela manhã` →
+  `["08:00"]`; `Tomar 01 comprimido pela noite`, `1 cp à noite` e `1 cp ao deitar` →
+  `["20:00"]`; `1 cp pela manhã e 1 à noite` → `["08:00", "20:00"]`; `1x ao dia à noite`
+  → `["20:00"]`.
 
 ## Casos de borda
 

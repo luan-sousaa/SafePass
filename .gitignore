@@ -1,4 +1,4 @@
-node_modules/
+node_modules
 dist/
 build/
 .cache/
@@ -9,3 +9,4 @@ vite.config.*.timestamp-*
 *-debug.log*
 logs/
 *.log
+.venv
