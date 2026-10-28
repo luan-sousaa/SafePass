@@ -79,7 +79,9 @@ exame **não** compartilhado, que não aparece):
 ## Modelo
 
 **dependente**: `id`, `nome`, `parentesco`, `data_nascimento` (`AAAA-MM-DD` ou `null`).
-Sempre de um usuário.
+Sempre de um usuário. Receita também pode ser de um dependente: o front escolhe o dono ao
+confirmar (`dependente_id` em `POST /api/prescriptions`), e o documento `receita` já nasce
+com esse `dono`.
 
 **documento**:
 

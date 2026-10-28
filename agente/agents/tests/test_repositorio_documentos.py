@@ -37,7 +37,7 @@ def _dependente(cliente, nome="Pedro", parentesco="Filho"):
     return cliente.post("/api/dependentes", json={"nome": nome, "parentesco": parentesco, "data_nascimento": "2018-03-02"}).json()
 
 
-def _receita_via_ocr(cliente, nome):
+def _receita_via_ocr(cliente, nome, **extra):
     """Foto → extract → confirmação; devolve o documento tipo receita criado."""
     item = MedicationItem(medicamento=nome, dose="500mg", posologia="2x ao dia", periodo="7 dias", confianca=0.95)
     result = ExtractionResult(
@@ -54,6 +54,7 @@ def _receita_via_ocr(cliente, nome):
         "medico": "Dr. Carlos",
         "data_receita": "2026-09-17",
         "medicamentos": [{"medicamento": nome, "dose": "500mg", "posologia": "2x ao dia", "periodo": "7 dias"}],
+        **extra,
     })
     return next(d for d in cliente.get("/api/documentos", params={"tipo": "receita"}).json() if d["titulo"] == nome)
 
@@ -205,3 +206,40 @@ def test_manual_prescription_document_has_no_file_ec4():
 
     assert (documento["tipo"], documento["titulo"]) == ("receita", "Losartana")
     assert ana.get(f"/api/documentos/{documento['id']}/arquivo").status_code == 404
+
+
+def test_prescription_can_belong_to_dependent_ac10():
+    pedro = _dependente(ana)
+    dono_pedro = {"tipo": "dependente", "id": pedro["id"], "nome": "Pedro", "parentesco": "Filho"}
+
+    via_ocr = _receita_via_ocr(ana, "Amoxicilina", dependente_id=pedro["id"])
+    ana.post("/api/prescriptions", json={
+        "dependente_id": pedro["id"],
+        "medico": None,
+        "data_receita": None,
+        "medicamentos": [{"medicamento": "Losartana", "dose": "50mg", "posologia": "1x ao dia", "periodo": ""}],
+    })
+
+    assert via_ocr["dono"] == dono_pedro
+    assert [d["dono"] for d in ana.get("/api/documentos", params={"dependente_id": pedro["id"]}).json()] == [dono_pedro, dono_pedro]
+    assert [r["dependente_id"] for r in ana.get("/api/prescriptions").json()] == [pedro["id"], pedro["id"]]
+
+
+def test_rejects_prescription_for_another_users_dependent_ec7():
+    dependente_do_bruno = _dependente(bruno)
+    with patch("api.main.extract_prescription", return_value=ExtractionResult(
+        data=PrescriptionExtraction(medicamentos=[], confianca_geral=0.0), precisa_revisar=True, campos_revisar=[], origem="tesseract",
+    )):
+        documento_ocr_id = ana.post("/api/prescriptions/extract", files={"file": ("r.jpg", JPEG, "image/jpeg")}).json()["documento_ocr_id"]
+    receita = {
+        "documento_ocr_id": documento_ocr_id,
+        "dependente_id": dependente_do_bruno["id"],
+        "medico": None,
+        "data_receita": None,
+        "medicamentos": [{"medicamento": "Dipirona", "dose": "", "posologia": "", "periodo": ""}],
+    }
+
+    assert ana.post("/api/prescriptions", json=receita).status_code == 404
+    assert ana.post("/api/prescriptions", json={**receita, "documento_ocr_id": None}).status_code == 404
+    assert ana.get("/api/prescriptions").json() == [] and ana.get("/api/documentos").json() == []
+    assert ana.post("/api/prescriptions", json={**receita, "dependente_id": None}).status_code == 201  # a leitura seguiu em revisão

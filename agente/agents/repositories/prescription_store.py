@@ -57,14 +57,18 @@ def salvar(receita: dict, usuario_id: str) -> dict:
             (usuario_id, receita["medico"], receita["data_receita"], criado_em, json.dumps(receita["medicamentos"], ensure_ascii=False), documento_ocr_id),
         )
         conn.execute(  # a foto da leitura (se houver) vira o arquivo do documento
-            "INSERT INTO documento (usuario_id, tipo, titulo, data_documento, arquivo, mime_type, tamanho, documento_ocr_id, criado_em) "
-            "SELECT usuario_id, 'receita', ?, ?, arquivo, mime_type, tamanho, id, ? FROM documento_ocr WHERE id = ?",
-            (", ".join(m["medicamento"] for m in receita["medicamentos"]), receita["data_receita"], criado_em, documento_ocr_id),
+            "INSERT INTO documento (usuario_id, dependente_id, tipo, titulo, data_documento, arquivo, mime_type, tamanho, documento_ocr_id, criado_em) "
+            "SELECT usuario_id, ?, 'receita', ?, ?, arquivo, mime_type, tamanho, id, ? FROM documento_ocr WHERE id = ?",
+            (receita.get("dependente_id"), ", ".join(m["medicamento"] for m in receita["medicamentos"]), receita["data_receita"], criado_em, documento_ocr_id),
         )
     return {**receita, "id": cur.lastrowid, "criado_em": criado_em, "documento_ocr_id": documento_ocr_id}
 
 
 def listar(usuario_id: str) -> list[dict]:
     with _connect() as conn:
-        rows = conn.execute("SELECT * FROM receitas WHERE usuario_id = ? ORDER BY id DESC", (usuario_id,)).fetchall()
+        rows = conn.execute(  # o dono vem do documento da receita, que o usuário pode mudar depois
+            "SELECT r.*, d.dependente_id FROM receitas r LEFT JOIN documento d ON d.documento_ocr_id = r.documento_ocr_id "
+            "WHERE r.usuario_id = ? ORDER BY r.id DESC",
+            (usuario_id,),
+        ).fetchall()
     return [{**dict(row), "medicamentos": json.loads(row["medicamentos"])} for row in rows]

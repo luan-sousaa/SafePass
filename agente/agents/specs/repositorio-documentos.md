@@ -46,6 +46,11 @@ troca pela validação do JWT.
   ou só os do dependente se `dependente_id` vier), com tipo, data, dono e dados
   estruturados, mais os medicamentos e lembretes **das receitas compartilhadas**. Nada
   derivado de documento não compartilhado aparece.
+- **FR-10** (2026-10-28): `POST /api/prescriptions` MAY receber `dependente_id`, tanto
+  com `documento_ocr_id` quanto no preenchimento manual. Ele MUST ser dependente do
+  usuário (404 se não for, nada gravado) e vai para o `documento` tipo `receita` criado na
+  confirmação. `GET /api/prescriptions` devolve o `dependente_id` atual desse documento
+  (nulo = do próprio usuário).
 
 ## Interface / contrato
 
@@ -105,6 +110,9 @@ O formato completo de cada resposta está em `docs/contrato-assistente-ia.md`.
   compartilhados daquele dependente aparecem, com `dono` = nome e parentesco.
 - **AC-9** (FR-7): Dado um documento, quando é apagado, então o registro e o arquivo
   somem.
+- **AC-10** (FR-10): Dado um dependente do usuário, quando a receita é confirmada com o
+  `dependente_id` (pelo OCR ou à mão), então o documento `receita` tem `dono` = o
+  dependente e a receita listada traz o mesmo `dependente_id`.
 
 ## Casos de borda
 
@@ -118,6 +126,8 @@ O formato completo de cada resposta está em `docs/contrato-assistente-ia.md`.
   (`usuario_id` nulo) → não aparecem para ninguém.
 - **EC-6** (FR-7): Apagar o documento de uma receita não apaga a receita: os
   medicamentos continuam até existir rota própria para isso.
+- **EC-7** (FR-10): `dependente_id` de outro usuário (ou inexistente) no `POST
+  /api/prescriptions` → 404; a leitura continua em `revisao` e nada é gravado.
 
 ## Fora de escopo
 

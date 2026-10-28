@@ -37,6 +37,7 @@ class MedicamentoIn(BaseModel):
 
 class ReceitaIn(BaseModel):
     documento_ocr_id: Optional[int] = None  # da extração; sem ele, é preenchimento manual
+    dependente_id: Optional[int] = None  # dono da receita; nulo = o próprio usuário
     medico: Optional[str] = None
     data_receita: Optional[str] = None
     medicamentos: list[MedicamentoIn] = Field(min_length=1)
@@ -118,6 +119,7 @@ def extract(file: UploadFile, usuario_id: UsuarioAtual) -> ExtracaoOut:
 
 @app.post("/api/prescriptions", status_code=201, response_model=ReceitaOut)
 def save(receita: ReceitaIn, usuario_id: UsuarioAtual) -> dict:
+    documentos.exigir_dependente(usuario_id, receita.dependente_id)
     try:
         return prescription_store.salvar(receita.model_dump(), usuario_id)
     except prescription_store.DocumentoIndisponivel:
