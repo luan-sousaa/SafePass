@@ -19,12 +19,12 @@ conversacional, porque a tela de revisão precisa de JSON, não de texto.
 - **FR-2**: A API MUST aceitar só JPEG e PNG, identificados pelo conteúdo do arquivo
   (assinatura de bytes), não pelo `Content-Type` declarado pelo cliente.
 - **FR-3**: A API MUST recusar arquivo vazio ou maior que 10 MB sem chamar o Gemini.
-- **FR-4**: A API MUST NOT expor `confidence`/`confidence_geral` numéricos. Cada
-  medicamento sai com `precisa_revisar: bool` (`confidence < CONFIDENCE_THRESHOLD`,
+- **FR-4**: A API MUST NOT expor `confianca`/`confianca_geral` numéricos. Cada
+  medicamento sai com `precisa_revisar: bool` (`confianca < CONFIDENCE_THRESHOLD`,
   já considerando o zeramento do `review_guard`), mantendo a regra do FR-5 da spec
   de extração.
-- **FR-5**: A API MUST repassar `needs_manual_review`, `observacoes` e `source`
-  (`"gemini"` | `"tesseract_fallback"`), para o front decidir entre tela de revisão e
+- **FR-5**: A API MUST repassar `precisa_revisar`, `observacoes` e `origem`
+  (`"gemini"` | `"tesseract"`), para o front decidir entre tela de revisão e
   preenchimento manual. O fallback é resposta 200, não erro.
 - **FR-6** (2026-10-18): A extração MUST devolver também `medico` e `data_receita`
   (`AAAA-MM-DD`), ambos `null` quando não estiverem legíveis, para preencher a tela de
@@ -35,7 +35,8 @@ conversacional, porque a tela de revisão precisa de JSON, não de texto.
 - **FR-8** (2026-10-18): A API MUST expor `GET /api/prescriptions`, listando as receitas
   salvas da mais recente para a mais antiga.
 - **FR-9** (2026-10-18): A persistência MUST ficar isolada em
-  `repositories/prescription_store.py` (`salvar`, `listar`). Hoje é SQLite (stdlib) só
+  `repositories/prescription_store.py` (`salvar`, `listar` e, desde 2026-10-28,
+  `iniciar_documento`, `concluir_extracao`). Hoje é SQLite (stdlib) só
   para não bloquear o front; a frente de banco troca o corpo dessas duas funções pelo
   PostgreSQL sem mexer na API.
 - **FR-10** (2026-10-23): A API MUST expor `GET /api/medications`, com cada medicamento
@@ -49,7 +50,13 @@ conversacional, porque a tela de revisão precisa de JSON, não de texto.
   `a cada 8 horas` → intervalo de 8 h; `3x ao dia`/`três vezes ao dia` → 24 h ÷ 3.
   Posologia condicional (`se necessário`, `se dor`, `SOS`) ou sem frequência
   reconhecível MUST devolver `horarios: []` — o sistema não inventa horário.
-- **FR-13** (2026-10-28): Posologias sem intervalo, mas com momento do dia ou dose diária
+- **FR-13** (2026-10-28): A extração MUST gravar a leitura em `documento_ocr` e devolver
+  `documento_ocr_id`; o `POST /api/prescriptions` MAY recebê-lo para confirmar aquela
+  leitura. Regras, status e origem na spec `documento-ocr`.
+- **FR-14** (2026-10-28): Toda rota MUST exigir o usuário (`X-Usuario-Id` em dev, 401 sem
+  ele) e receitas, medicamentos e lembretes MUST ser só do usuário atual. Detalhes na
+  spec `repositorio-documentos`, FR-1/FR-2.
+- **FR-15** (2026-10-28): Posologias sem intervalo, mas com momento do dia ou dose diária
   única, MUST gerar horário fixo: `pela manhã` → 08:00; `à noite`, `pela noite` e `ao
   deitar` → 20:00 (o mesmo horário da 2ª dose de `12/12h`, para não espalhar lembretes);
   `1 cp ao dia`/`por dia` sem número de vezes → uma dose às 08:00. Manhã e noite na mesma
@@ -65,8 +72,9 @@ POST /api/prescriptions/extract
 Content-Type: multipart/form-data   (campo: file)
 
 200 {
-  "source": "gemini" | "tesseract_fallback",
-  "needs_manual_review": bool,
+  "documento_ocr_id": int,
+  "origem": "gemini" | "tesseract",
+  "precisa_revisar": bool,
   "observacoes": str | null,
   "medicamentos": [
     {"medicamento": str, "dose": str, "posologia": str, "periodo": str, "precisa_revisar": bool}
@@ -76,10 +84,12 @@ Content-Type: multipart/form-data   (campo: file)
 (o 200 também traz "medico": str | null e "data_receita": "AAAA-MM-DD" | null — FR-6)
 
 POST /api/prescriptions
-{"medico": str | null, "data_receita": "AAAA-MM-DD" | null,
+{"documento_ocr_id": int | null, "dependente_id": int | null, "medico": str | null, "data_receita": "AAAA-MM-DD" | null,
  "medicamentos": [{"medicamento": str, "dose": str, "posologia": str, "periodo": str}]}  (mín. 1)
-201 {"id": int, "criado_em": str (ISO 8601), ...os campos enviados}
+201 {"id": int, "criado_em": str (ISO 8601), "documento_ocr_id": int, ...os campos enviados}
 422 sem medicamentos ou medicamento com nome vazio
+409 documento_ocr_id inexistente ou já confirmado (FR-13)
+404 dependente_id que não é dependente do usuário (spec repositorio-documentos, FR-10)
 
 GET /api/prescriptions
 200 [ {mesmo formato do 201}, ... ]   (mais recente primeiro)
@@ -98,13 +108,13 @@ Rodar (de dentro de `agents/`): `uvicorn api.main:app --reload --port 8000`
 ## Critérios de aceite
 
 - **AC-1** (FR-1, FR-5): Dada uma imagem JPEG válida e extração bem-sucedida, quando
-  enviada ao endpoint, então responde 200 com os medicamentos, `source="gemini"` e
-  `needs_manual_review` repassado do serviço.
-- **AC-2** (FR-4): Dado um item com `confidence` abaixo do limiar e outro acima, quando
+  enviada ao endpoint, então responde 200 com os medicamentos, `origem="gemini"` e
+  `precisa_revisar` repassado do serviço.
+- **AC-2** (FR-4): Dado um item com `confianca` abaixo do limiar e outro acima, quando
   a resposta sai, então o primeiro vem com `precisa_revisar=true`, o segundo com
-  `false`, e nenhum campo `confidence` aparece no JSON.
+  `false`, e nenhum campo `confianca` aparece no JSON.
 - **AC-3** (FR-5): Dado que o serviço caiu no fallback offline, quando a resposta sai,
-  então é 200 com `source="tesseract_fallback"`, lista vazia e o texto bruto em
+  então é 200 com `origem="tesseract"`, lista vazia e o texto bruto em
   `observacoes`.
 - **AC-4** (FR-2): Dado um arquivo que não é JPEG/PNG (mesmo declarado como
   `image/png`), quando enviado, então responde 415 e o serviço não é chamado.
@@ -122,7 +132,7 @@ Rodar (de dentro de `agents/`): `uvicorn api.main:app --reload --port 8000`
 - **AC-9** (FR-11): Dada uma receita com um medicamento `2x ao dia` e outro `se
   necessário`, quando `GET /api/reminders` é chamado, então voltam 2 lembretes (08:00 e
   20:00), ambos do primeiro medicamento.
-- **AC-10** (FR-13): `1 cp ao dia` → `["08:00"]`; `1 comprimido pela manhã` →
+- **AC-10** (FR-15): `1 cp ao dia` → `["08:00"]`; `1 comprimido pela manhã` →
   `["08:00"]`; `Tomar 01 comprimido pela noite`, `1 cp à noite` e `1 cp ao deitar` →
   `["20:00"]`; `1 cp pela manhã e 1 à noite` → `["08:00", "20:00"]`; `1x ao dia à noite`
   → `["20:00"]`.
@@ -142,7 +152,6 @@ Rodar (de dentro de `agents/`): `uvicorn api.main:app --reload --port 8000`
 - **PDF**: o fallback Tesseract não lê PDF; entra numa spec futura se o squad quiser.
 - **Banco definitivo** (PostgreSQL, schema normalizado, migrações): frente de banco do
   squad — ver FR-9. Hoje os medicamentos ficam numa coluna JSON.
-- **Usuário dono da receita**: entra junto com a autenticação.
 - **Chat via orquestrador (`root_agent`)**: o front ainda não precisa; quando precisar,
   avaliar `adk api_server`.
 - **CORS e autenticação**: em dev o front usa proxy do Vite (mesma origem); auth entra

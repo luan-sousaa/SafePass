@@ -29,9 +29,9 @@ def _fake_gemini_client(parsed_extraction):
 def test_extract_prescription_returns_structured_data_on_success_ac1():
     fake_extraction = PrescriptionExtraction(
         medicamentos=[
-            MedicationItem(medicamento="Dipirona", dose="500mg", posologia="1 cp 8/8h", periodo="5 dias", confidence=0.95)
+            MedicationItem(medicamento="Dipirona", dose="500mg", posologia="1 cp 8/8h", periodo="5 dias", confianca=0.95)
         ],
-        confidence_geral=0.95,
+        confianca_geral=0.95,
     )
 
     with patch(
@@ -40,8 +40,8 @@ def test_extract_prescription_returns_structured_data_on_success_ac1():
     ):
         result = extract_prescription(b"fake-image-bytes", mime_type="image/jpeg")
 
-    assert result.source == "gemini"
-    assert result.needs_manual_review is False
+    assert result.origem == "gemini"
+    assert result.precisa_revisar is False
     assert len(result.data.medicamentos) == 1
     assert result.data.medicamentos[0].medicamento == "Dipirona"
 
@@ -56,8 +56,8 @@ def test_extract_prescription_falls_back_to_tesseract_when_gemini_fails_ac5():
     ):
         result = extract_prescription(b"fake-image-bytes")
 
-    assert result.source == "tesseract_fallback"
-    assert result.needs_manual_review is True
+    assert result.origem == "tesseract"
+    assert result.precisa_revisar is True
     assert result.data.medicamentos == []
     assert "Dipirona 500mg" in result.data.observacoes
 
@@ -72,8 +72,8 @@ def test_extract_prescription_fallback_does_not_raise_when_tesseract_also_fails_
     ):
         result = extract_prescription(b"fake-image-bytes")
 
-    assert result.source == "tesseract_fallback"
-    assert result.needs_manual_review is True
+    assert result.origem == "tesseract"
+    assert result.precisa_revisar is True
     assert result.data.medicamentos == []
     assert result.data.observacoes is not None
 
@@ -107,7 +107,7 @@ def test_extract_prescription_falls_back_when_gemini_returns_unparseable_respons
     ):
         result = extract_prescription(b"fake-image-bytes")
 
-    assert result.source == "tesseract_fallback"
+    assert result.origem == "tesseract"
 
 
 def test_pior_caso_do_gemini_cabe_em_25_segundos_ac12():
@@ -160,6 +160,6 @@ def test_gemini_lento_ou_fora_cai_no_fallback_dentro_do_limite_ac13(modo, monkey
     finally:
         server.shutdown()
 
-    assert result.source == "tesseract_fallback"
+    assert result.origem == "tesseract"
     assert len(chamadas) == gemini_config.GEMINI_EXTRACTION_ATTEMPTS
     assert duracao < 2  # sem o timeout, só o modo "lento" já levaria 2 s por tentativa

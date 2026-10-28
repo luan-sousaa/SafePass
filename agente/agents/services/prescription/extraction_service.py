@@ -26,12 +26,12 @@ class MedicationItem(BaseModel):
     dose: str
     posologia: str
     periodo: str
-    confidence: float = Field(ge=0.0, le=1.0)
+    confianca: float = Field(ge=0.0, le=1.0)
 
 
 class PrescriptionExtraction(BaseModel):
     medicamentos: list[MedicationItem]
-    confidence_geral: float = Field(ge=0.0, le=1.0)
+    confianca_geral: float = Field(ge=0.0, le=1.0)
     observacoes: Optional[str] = None
     medico: Optional[str] = None
     data_receita: Optional[str] = None  # AAAA-MM-DD
@@ -39,9 +39,9 @@ class PrescriptionExtraction(BaseModel):
 
 class ExtractionResult(BaseModel):
     data: PrescriptionExtraction
-    needs_manual_review: bool
-    low_confidence_fields: list[str]
-    source: str = "gemini"
+    precisa_revisar: bool
+    campos_revisar: list[str]
+    origem: str = "gemini"
 
 
 def extract_prescription(image_bytes: bytes, mime_type: str = "image/jpeg") -> ExtractionResult:
@@ -91,13 +91,13 @@ def _extract_with_gemini(image_bytes: bytes, mime_type: str) -> ExtractionResult
     if extraction is None:
         raise ValueError("Gemini não retornou um JSON estruturado válido para a receita.")
 
-    needs_manual_review, low_confidence_fields = apply_hitl_guard(extraction)
+    precisa_revisar, campos_revisar = apply_hitl_guard(extraction)
 
     return ExtractionResult(
         data=extraction,
-        needs_manual_review=needs_manual_review,
-        low_confidence_fields=low_confidence_fields,
-        source="gemini",
+        precisa_revisar=precisa_revisar,
+        campos_revisar=campos_revisar,
+        origem="gemini",
     )
 
 
@@ -118,11 +118,11 @@ def _extract_with_tesseract_fallback(image_bytes: bytes) -> ExtractionResult:
     # Sem estruturação automática nesse caminho: confiar em regex/heurística pra separar
     # medicamento/dose/posologia/período do texto bruto do Tesseract arriscaria dado errado
     # sem um LLM pra validar — melhor devolver vazio e revisão manual obrigatória (RF05).
-    extraction = PrescriptionExtraction(medicamentos=[], confidence_geral=0.0, observacoes=observacoes)
+    extraction = PrescriptionExtraction(medicamentos=[], confianca_geral=0.0, observacoes=observacoes)
 
     return ExtractionResult(
         data=extraction,
-        needs_manual_review=True,
-        low_confidence_fields=[],
-        source="tesseract_fallback",
+        precisa_revisar=True,
+        campos_revisar=[],
+        origem="tesseract",
     )

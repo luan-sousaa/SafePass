@@ -244,6 +244,11 @@ O front acessa a API por `/api` (proxy do Vite para a porta 8000).
 | `GET /api/prescriptions` | Lista as receitas salvas |
 | `GET /api/medications` | Medicamentos salvos com os horários das doses |
 | `GET /api/reminders` | Um lembrete por horário de dose |
+| `/api/documentos`, `/api/dependentes` | Repositório documental por usuário e dependente |
+| `GET /api/assistente/contexto` | Documentos compartilhados com o assistente IA |
+
+Toda rota exige o header `X-Usuario-Id` (só em dev; o front manda um id fixo). O contrato
+para o squad do Chat IA está em [`docs/contrato-assistente-ia.md`](docs/contrato-assistente-ia.md).
 
 Contrato completo em `agente/agents/specs/prescription-api.md`. Testes:
 `cd agente/agents && .venv/bin/pytest`.

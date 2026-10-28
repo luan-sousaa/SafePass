@@ -1,4 +1,4 @@
-"""Testa services/prescription/dose_schedule.py — spec: specs/prescription-api.md (FR-12, FR-13, AC-10, EC-5)."""
+"""Testa services/prescription/dose_schedule.py — spec: specs/prescription-api.md (FR-12, FR-15, AC-10, EC-5)."""
 
 import pytest
 
