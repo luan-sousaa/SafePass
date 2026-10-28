@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Alertas from './components/Alertas';
 import Sidebar from './components/layout/Sidebar';
 import TopBar from './components/layout/TopBar';
 import HomeScreen from './screens/HomeScreen';
@@ -38,6 +39,7 @@ export default function App() {
           </main>
         </div>
       </div>
+      <Alertas />
     </div>
   );
 }
