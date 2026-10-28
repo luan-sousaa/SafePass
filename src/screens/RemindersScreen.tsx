@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Icon from '../components/Icon';
 import { useLembretes } from '../services/prescriptions';
 
@@ -12,20 +12,21 @@ const reminders = [
 ];
 
 export default function RemindersScreen() {
-  const [items, setItems] = useState(reminders);
-  const lembretes = useLembretes();
-
-  useEffect(() => {
-    const salvos = lembretes.map(l => ({
-      time: l.horario,
-      label: `${l.medicamento} ${l.dose}`.trim(),
-      type: 'Medicamento',
-      days: l.periodo ? `Diário por ${l.periodo}` : 'Diário',
-      color: '#0d9488',
-      active: true,
-    }));
-    setItems(prev => [...salvos, ...prev]);
-  }, [lembretes]);
+  // Só o liga/desliga fica em estado; a lista sai da API a cada render (antes, o efeito
+  // concatenava a cada resposta e o GET duplo do StrictMode duplicava os lembretes).
+  const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  const salvos = useLembretes().map(l => ({
+    time: l.horario,
+    label: `${l.medicamento} ${l.dose}`.trim(),
+    type: 'Medicamento',
+    days: l.periodo ? `Diário por ${l.periodo}` : 'Diário',
+    color: '#0d9488',
+    active: true,
+  }));
+  const items = [...salvos, ...reminders].map(r => {
+    const key = `${r.label} ${r.time} ${r.days}`;
+    return { ...r, key, active: toggled[key] ?? r.active };
+  });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -66,7 +67,7 @@ export default function RemindersScreen() {
               <p className="text-base font-semibold" style={{ color: 'var(--brand-dark)' }}>{r.time}</p>
             </div>
             <button
-              onClick={() => setItems(prev => prev.map((item, idx) => idx === i ? { ...item, active: !item.active } : item))}
+              onClick={() => setToggled(prev => ({ ...prev, [r.key]: !r.active }))}
               className="w-12 h-6 rounded-full relative transition-all shrink-0"
               style={{ background: r.active ? 'var(--primary)' : 'var(--border)' }}
             >
