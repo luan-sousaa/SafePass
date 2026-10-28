@@ -28,12 +28,20 @@ const formatDate = (iso: string) =>
     .toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })
     .replace(/\.| de/g, ''); // "18 de out. de 2026" → "18 out 2026", como os exemplos
 
+const meses = ['jan', 'fev', 'mar', 'abr', 'mai', 'jun', 'jul', 'ago', 'set', 'out', 'nov', 'dez'];
+
+// "18 set 2026" → "2026-09-18", para ordenar as datas já formatadas
+const sortKey = (date: string) => {
+  const [dia, mes, ano] = date.split(' ');
+  return `${ano}-${String(meses.indexOf(mes) + 1).padStart(2, '0')}-${dia.padStart(2, '0')}`;
+};
+
 export default function HistoryScreen() {
   const salvas = useReceitas().map(r => ({
     date: formatDate(r.data_receita ?? r.criado_em),
     items: [{ type: 'Receita', name: r.medicamentos.map(m => m.medicamento).join(', '), detail: r.medico ?? 'Médico não informado' }],
   }));
-  const groups = [...salvas, ...timeline];
+  const groups = [...salvas, ...timeline].sort((a, b) => sortKey(b.date).localeCompare(sortKey(a.date)));
 
   return (
     <div className="space-y-2 animate-fade-in max-w-2xl">

@@ -1,4 +1,4 @@
-"""Testa services/prescription/dose_schedule.py — spec: specs/prescription-api.md (FR-12, EC-5)."""
+"""Testa services/prescription/dose_schedule.py — spec: specs/prescription-api.md (FR-12, FR-13, AC-10, EC-5)."""
 
 import pytest
 
@@ -17,6 +17,23 @@ from services.prescription.dose_schedule import horarios
     ],
 )
 def test_calcula_horarios_a_partir_da_posologia_fr12(posologia, esperado):
+    assert horarios(posologia) == esperado
+
+
+@pytest.mark.parametrize(
+    "posologia, esperado",
+    [
+        ("1 cp ao dia", ["08:00"]),
+        ("1 comprimido por dia", ["08:00"]),
+        ("1 comprimido pela manhã", ["08:00"]),
+        ("Tomar 01 comprimido pela noite", ["20:00"]),
+        ("1 cp à noite", ["20:00"]),
+        ("1 cp ao deitar", ["20:00"]),
+        ("1 cp pela manhã e 1 à noite", ["08:00", "20:00"]),
+        ("1x ao dia à noite", ["20:00"]),
+    ],
+)
+def test_momento_do_dia_e_dose_diaria_unica_viram_horario_fixo_ac10(posologia, esperado):
     assert horarios(posologia) == esperado
 
 

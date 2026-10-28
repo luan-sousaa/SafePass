@@ -54,11 +54,11 @@ export default function MedicationsScreen() {
                     { label: 'Dosagem', value: med.dose },
                     { label: 'Frequência', value: med.freq },
                     { label: 'Período', value: med.period },
-                    { label: 'Próxima dose', value: med.next },
+                    { label: 'Horários', value: med.next },
                   ].map(item => (
                     <div key={item.label}>
                       <p className="text-xs" style={{ color: 'var(--muted-foreground)' }}>{item.label}</p>
-                      <p className="text-xs font-medium mt-0.5" style={{ color: item.label === 'Próxima dose' ? 'var(--brand)' : 'var(--foreground)' }}>
+                      <p className="text-xs font-medium mt-0.5" style={{ color: item.label === 'Horários' ? 'var(--brand)' : 'var(--foreground)' }}>
                         {item.value}
                       </p>
                     </div>

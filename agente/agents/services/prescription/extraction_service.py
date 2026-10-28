@@ -4,7 +4,14 @@ from typing import Optional
 from google.genai import types
 from pydantic import BaseModel, Field
 
-from config.gemini_config import DEFAULT_MODEL, GENERATION_TEMPERATURE
+from config.gemini_config import (
+    DEFAULT_MODEL,
+    GEMINI_EXTRACTION_ATTEMPTS,
+    GEMINI_EXTRACTION_TIMEOUT_MS,
+    GEMINI_RETRY_INITIAL_DELAY,
+    GEMINI_RETRY_MAX_DELAY,
+    GENERATION_TEMPERATURE,
+)
 from factories.model_factory import next_api_key
 from prompts.extract_prescription_prompt import EXTRACT_PRESCRIPTION_PROMPT
 from repositories.custom_gemini import build_genai_client
@@ -66,7 +73,17 @@ def _extract_with_gemini(image_bytes: bytes, mime_type: str) -> ExtractionResult
             temperature=GENERATION_TEMPERATURE,
             response_mime_type="application/json",
             response_schema=PrescriptionExtraction,
-        ),  # retry (408/429/5xx) já vem do client: build_genai_client
+            # Substitui o retry do client só nesta chamada, com limite de tempo por
+            # tentativa (FR-10): sem ele, o Gemini em 503 levava ~60 s para desistir.
+            http_options=types.HttpOptions(
+                timeout=GEMINI_EXTRACTION_TIMEOUT_MS,
+                retry_options=types.HttpRetryOptions(
+                    attempts=GEMINI_EXTRACTION_ATTEMPTS,
+                    initial_delay=GEMINI_RETRY_INITIAL_DELAY,
+                    max_delay=GEMINI_RETRY_MAX_DELAY,
+                ),
+            ),
+        ),
     )
 
     extraction: Optional[PrescriptionExtraction] = response.parsed
