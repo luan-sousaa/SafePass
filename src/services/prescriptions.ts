@@ -10,8 +10,9 @@ export type Medicamento = {
 };
 
 export type Extracao = {
-  source: 'gemini' | 'tesseract_fallback';
-  needs_manual_review: boolean;
+  documento_ocr_id: number; // mandar de volta ao salvar (spec documento-ocr)
+  origem: 'gemini' | 'tesseract';
+  precisa_revisar: boolean;
   observacoes: string | null;
   medico: string | null;
   data_receita: string | null; // AAAA-MM-DD
@@ -19,6 +20,8 @@ export type Extracao = {
 };
 
 export type ReceitaIn = {
+  documento_ocr_id: number | null; // null = preenchimento manual
+  dependente_id: number | null; // dono da receita; null = o próprio usuário
   medico: string | null;
   data_receita: string | null;
   medicamentos: Omit<Medicamento, 'precisa_revisar'>[];
@@ -26,22 +29,48 @@ export type ReceitaIn = {
 
 export type Receita = ReceitaIn & { id: number; criado_em: string };
 
+// Contrato: agente/agents/specs/medicamentos-vacinas.md
 export type MedicamentoSalvo = Omit<Medicamento, 'precisa_revisar'> & {
-  receita_id: number;
+  id: number | null; // só no manual
+  origem: 'receita' | 'manual';
+  receita_id: number | null;
   medico: string | null;
   data_receita: string | null;
   horarios: string[]; // "HH:MM", calculados da posologia; vazio se não der pra calcular
+  dependente_id: number | null;
+  inicio: string; // AAAA-MM-DD
+  duracao_dias: number | null; // null = contínuo
+  encerrado_em: string | null;
+  ativo: boolean;
 };
 
-export type Lembrete = { medicamento: string; dose: string; periodo: string; horario: string };
+export type Lembrete = {
+  tipo: 'medicamento' | 'vacina';
+  medicamento: string; // nome do medicamento ou da vacina
+  dose: string;
+  periodo: string;
+  horario: string | null; // null em vacina
+  data: string | null; // próxima dose da vacina
+  dependente_id: number | null;
+};
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+// ponytail: usuário fixo só para dev. Quando o login do outro grupo existir, aqui vira
+// `Authorization: Bearer <token>` (spec repositorio-documentos, FR-1).
+const USUARIO_DEV = 'dev';
+
+/** Toda chamada à API passa por aqui: identifica o usuário, aplica o timeout e traduz os erros. */
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path, { ...init, signal: AbortSignal.timeout(60_000) });
+    res = await fetch(path, {
+      ...init,
+      headers: { ...(init?.headers as Record<string, string>), 'X-Usuario-Id': USUARIO_DEV },
+      signal: AbortSignal.timeout(60_000),
+    });
   } catch (err) {
     throw new Error(
-      err instanceof DOMException && err.name === 'TimeoutError'
+      // Safari rejeita o AbortSignal.timeout com AbortError em vez de TimeoutError.
+      err instanceof DOMException && (err.name === 'TimeoutError' || err.name === 'AbortError')
         ? 'O serviço demorou demais para responder. Tente novamente.'
         : 'Não foi possível conectar ao serviço. Verifique sua conexão.',
     );
@@ -53,7 +82,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(typeof detail === 'string' ? detail : 'O serviço está indisponível no momento.');
   }
 
-  return res.json();
+  if (res.status === 204) return undefined as T;
+  // Arquivo (download de documento) volta como Blob; o resto da API é JSON.
+  return res.headers.get('Content-Type')?.includes('application/json') ? res.json() : (res.blob() as Promise<T>);
 }
 
 export function extractPrescription(file: File): Promise<Extracao> {
@@ -70,16 +101,16 @@ export function savePrescription(receita: ReceitaIn): Promise<Receita> {
   });
 }
 
-/** GET de uma lista da API. Lista vazia enquanto carrega ou se a API estiver fora. */
-function useList<T>(path: string): T[] {
+/** GET de uma lista da API. Lista vazia enquanto carrega ou se a API estiver fora. Mude `versao` para recarregar. */
+export function useList<T>(path: string, versao = 0): T[] {
   const [items, setItems] = useState<T[]>([]);
   useEffect(() => {
     request<T[]>(path).then(setItems, () => {});
-  }, [path]);
+  }, [path, versao]);
   return items;
 }
 
 /** Receitas salvas, mais recente primeiro. */
 export const useReceitas = () => useList<Receita>('/api/prescriptions');
-export const useMedicamentos = () => useList<MedicamentoSalvo>('/api/medications');
+export const useMedicamentos = (versao = 0) => useList<MedicamentoSalvo>('/api/medications', versao);
 export const useLembretes = () => useList<Lembrete>('/api/reminders');

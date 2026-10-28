@@ -8,3 +8,8 @@ GENERATION_TEMPERATURE = float(os.getenv("GEMINI_TEMPERATURE", "0.1"))
 GEMINI_RETRY_ATTEMPTS = int(os.getenv("GEMINI_RETRY_ATTEMPTS", "3"))
 GEMINI_RETRY_INITIAL_DELAY = float(os.getenv("GEMINI_RETRY_INITIAL_DELAY", "1"))
 GEMINI_RETRY_MAX_DELAY = float(os.getenv("GEMINI_RETRY_MAX_DELAY", "8"))
+
+# Só a extração (spec prescription-extraction, FR-10): pior caso = 2 tentativas de 10 s +
+# backoff ≈ 22 s, para o fallback Tesseract responder antes dos 60 s em que o front desiste.
+GEMINI_EXTRACTION_TIMEOUT_MS = int(os.getenv("GEMINI_EXTRACTION_TIMEOUT_MS", "10000"))
+GEMINI_EXTRACTION_ATTEMPTS = int(os.getenv("GEMINI_EXTRACTION_ATTEMPTS", "2"))

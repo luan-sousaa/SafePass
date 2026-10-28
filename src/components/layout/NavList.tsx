@@ -6,6 +6,7 @@ const navItems: { id: Screen; label: string; icon: IconName }[] = [
   { id: 'documents', label: 'Documentos', icon: 'document' },
   { id: 'history', label: 'Histórico', icon: 'history' },
   { id: 'medications', label: 'Medicamentos', icon: 'medication' },
+  { id: 'vaccines', label: 'Vacinas', icon: 'shield' },
   { id: 'reminders', label: 'Lembretes', icon: 'reminder' },
   { id: 'dependents', label: 'Dependentes', icon: 'users' },
   { id: 'chat', label: 'Assistente IA', icon: 'assistant' },

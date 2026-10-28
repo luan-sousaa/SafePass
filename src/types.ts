@@ -3,6 +3,7 @@ export type Screen =
   | 'documents'
   | 'add-document'
   | 'medications'
+  | 'vaccines'
   | 'reminders'
   | 'dependents'
   | 'history'

@@ -99,6 +99,21 @@ Permite acompanhar e controlar lembretes relacionados à saúde, incluindo:
 Os lembretes de medicamento são gerados automaticamente, um por horário de dose, a partir
 das receitas salvas. Eles podem ser ativados ou desativados conforme a necessidade do usuário.
 
+**Alertas (versão atual, só com o app aberto).** O front confere `GET /api/reminders` a cada
+30 s e avisa no horário de cada lembrete ligado:
+
+- com permissão, pela notificação nativa do navegador (Notification API), pedida por um botão
+  na tela de Lembretes, nunca no carregamento;
+- sem permissão ou sem suporte, por um aviso dentro do app.
+
+A lista é buscada de novo a cada verificação, então uma receita nova entra sozinha, e a virada
+do dia recomeça os horários. O liga/desliga de cada lembrete fica no navegador
+(`localStorage`), porque a API ainda não guarda essa preferência.
+
+Com o app fechado não há aviso: o timer vive na aba. O próximo passo, previsto na stack, é um
+service worker com push (FCM) disparado pelo backend, que manda a notificação mesmo com o
+SAFEpass fechado.
+
 ### Dependentes
 
 O módulo de dependentes possibilita organizar informações de saúde de outras pessoas vinculadas à conta.
@@ -242,8 +257,15 @@ O front acessa a API por `/api` (proxy do Vite para a porta 8000).
 | `POST /api/prescriptions/extract` | Foto da receita → medicamentos extraídos |
 | `POST /api/prescriptions` | Salva a receita confirmada |
 | `GET /api/prescriptions` | Lista as receitas salvas |
-| `GET /api/medications` | Medicamentos salvos com os horários das doses |
-| `GET /api/reminders` | Um lembrete por horário de dose |
+| `GET /api/medications` | Medicamentos (da receita e manuais) com horários e se estão ativos |
+| `POST /api/medications`, `PATCH /api/medications/{id}` | Cadastra, edita e encerra medicamento manual |
+| `GET /api/reminders` | Doses do dia dos medicamentos ativos e próximas doses de vacinas |
+| `/api/vacinas` | Registro e consulta de vacinas por dono |
+| `/api/documentos`, `/api/dependentes` | Repositório documental por usuário e dependente |
+| `GET /api/assistente/contexto` | Documentos compartilhados com o assistente IA |
+
+Toda rota exige o header `X-Usuario-Id` (só em dev; o front manda um id fixo). O contrato
+para o squad do Chat IA está em [`docs/contrato-assistente-ia.md`](docs/contrato-assistente-ia.md).
 
 Contrato completo em `agente/agents/specs/prescription-api.md`. Testes:
 `cd agente/agents && .venv/bin/pytest`.

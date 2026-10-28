@@ -4,7 +4,14 @@ from typing import Optional
 from google.genai import types
 from pydantic import BaseModel, Field
 
-from config.gemini_config import DEFAULT_MODEL, GENERATION_TEMPERATURE
+from config.gemini_config import (
+    DEFAULT_MODEL,
+    GEMINI_EXTRACTION_ATTEMPTS,
+    GEMINI_EXTRACTION_TIMEOUT_MS,
+    GEMINI_RETRY_INITIAL_DELAY,
+    GEMINI_RETRY_MAX_DELAY,
+    GENERATION_TEMPERATURE,
+)
 from factories.model_factory import next_api_key
 from prompts.extract_prescription_prompt import EXTRACT_PRESCRIPTION_PROMPT
 from repositories.custom_gemini import build_genai_client
@@ -19,12 +26,12 @@ class MedicationItem(BaseModel):
     dose: str
     posologia: str
     periodo: str
-    confidence: float = Field(ge=0.0, le=1.0)
+    confianca: float = Field(ge=0.0, le=1.0)
 
 
 class PrescriptionExtraction(BaseModel):
     medicamentos: list[MedicationItem]
-    confidence_geral: float = Field(ge=0.0, le=1.0)
+    confianca_geral: float = Field(ge=0.0, le=1.0)
     observacoes: Optional[str] = None
     medico: Optional[str] = None
     data_receita: Optional[str] = None  # AAAA-MM-DD
@@ -32,9 +39,9 @@ class PrescriptionExtraction(BaseModel):
 
 class ExtractionResult(BaseModel):
     data: PrescriptionExtraction
-    needs_manual_review: bool
-    low_confidence_fields: list[str]
-    source: str = "gemini"
+    precisa_revisar: bool
+    campos_revisar: list[str]
+    origem: str = "gemini"
 
 
 def extract_prescription(image_bytes: bytes, mime_type: str = "image/jpeg") -> ExtractionResult:
@@ -66,7 +73,17 @@ def _extract_with_gemini(image_bytes: bytes, mime_type: str) -> ExtractionResult
             temperature=GENERATION_TEMPERATURE,
             response_mime_type="application/json",
             response_schema=PrescriptionExtraction,
-        ),  # retry (408/429/5xx) já vem do client: build_genai_client
+            # Substitui o retry do client só nesta chamada, com limite de tempo por
+            # tentativa (FR-10): sem ele, o Gemini em 503 levava ~60 s para desistir.
+            http_options=types.HttpOptions(
+                timeout=GEMINI_EXTRACTION_TIMEOUT_MS,
+                retry_options=types.HttpRetryOptions(
+                    attempts=GEMINI_EXTRACTION_ATTEMPTS,
+                    initial_delay=GEMINI_RETRY_INITIAL_DELAY,
+                    max_delay=GEMINI_RETRY_MAX_DELAY,
+                ),
+            ),
+        ),
     )
 
     extraction: Optional[PrescriptionExtraction] = response.parsed
@@ -74,13 +91,13 @@ def _extract_with_gemini(image_bytes: bytes, mime_type: str) -> ExtractionResult
     if extraction is None:
         raise ValueError("Gemini não retornou um JSON estruturado válido para a receita.")
 
-    needs_manual_review, low_confidence_fields = apply_hitl_guard(extraction)
+    precisa_revisar, campos_revisar = apply_hitl_guard(extraction)
 
     return ExtractionResult(
         data=extraction,
-        needs_manual_review=needs_manual_review,
-        low_confidence_fields=low_confidence_fields,
-        source="gemini",
+        precisa_revisar=precisa_revisar,
+        campos_revisar=campos_revisar,
+        origem="gemini",
     )
 
 
@@ -101,11 +118,11 @@ def _extract_with_tesseract_fallback(image_bytes: bytes) -> ExtractionResult:
     # Sem estruturação automática nesse caminho: confiar em regex/heurística pra separar
     # medicamento/dose/posologia/período do texto bruto do Tesseract arriscaria dado errado
     # sem um LLM pra validar — melhor devolver vazio e revisão manual obrigatória (RF05).
-    extraction = PrescriptionExtraction(medicamentos=[], confidence_geral=0.0, observacoes=observacoes)
+    extraction = PrescriptionExtraction(medicamentos=[], confianca_geral=0.0, observacoes=observacoes)
 
     return ExtractionResult(
         data=extraction,
-        needs_manual_review=True,
-        low_confidence_fields=[],
-        source="tesseract_fallback",
+        precisa_revisar=True,
+        campos_revisar=[],
+        origem="tesseract",
     )

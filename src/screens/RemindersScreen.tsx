@@ -1,31 +1,24 @@
-import { useEffect, useState } from 'react';
 import Icon from '../components/Icon';
+import { AtivarNotificacoes } from '../components/Alertas';
+import { chaveDoLembrete, useLembretesLigados } from '../services/alertas';
 import { useLembretes } from '../services/prescriptions';
-
-const reminders = [
-  { time: '08:00', label: 'Omeprazol 20mg', type: 'Medicamento', days: 'Diário', color: '#0d9488', active: true },
-  { time: '12:00', label: 'Amoxicilina 500mg', type: 'Medicamento', days: 'Diário por 7 dias', color: '#0ea5e9', active: true },
-  { time: '19:00', label: 'Vitamina D 2000UI', type: 'Medicamento', days: 'Diário', color: '#f59e0b', active: true },
-  { time: '14:30', label: 'Consulta – Dermatologia', type: 'Consulta', days: '28/09/2026', color: '#8b5cf6', active: true },
-  { time: '09:00', label: 'Exame de sangue', type: 'Exame', days: '01/10/2026', color: '#0ea5e9', active: false },
-  { time: '07:00', label: 'Losartana 50mg', type: 'Medicamento', days: 'Diário', color: '#ef4444', active: false },
-];
+import { dataBR, useDependentes } from '../services/saude';
 
 export default function RemindersScreen() {
-  const [items, setItems] = useState(reminders);
-  const lembretes = useLembretes();
+  // O liga/desliga é o mesmo que o agendador dos avisos lê.
+  const [ligados, alternar] = useLembretesLigados();
+  const nomes = new Map(useDependentes().map(d => [d.id, d.nome]));
 
-  useEffect(() => {
-    const salvos = lembretes.map(l => ({
-      time: l.horario,
-      label: `${l.medicamento} ${l.dose}`.trim(),
-      type: 'Medicamento',
-      days: l.periodo ? `Diário por ${l.periodo}` : 'Diário',
-      color: '#0d9488',
-      active: true,
-    }));
-    setItems(prev => [...salvos, ...prev]);
-  }, [lembretes]);
+  const items = useLembretes().map(l => ({
+    key: chaveDoLembrete(l),
+    time: l.horario ?? (l.data ? dataBR(l.data) : ''),
+    label: `${l.medicamento} ${l.dose}`.trim(),
+    type: l.tipo === 'vacina' ? 'Vacina — próxima dose' : 'Medicamento',
+    days: [l.tipo === 'medicamento' && (l.periodo ? `Diário por ${l.periodo}` : 'Diário'), l.dependente_id && nomes.get(l.dependente_id)]
+      .filter(Boolean)
+      .join(' · '),
+    active: ligados[chaveDoLembrete(l)] ?? true,
+  }));
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -38,6 +31,8 @@ export default function RemindersScreen() {
           + Novo lembrete
         </button>
       </div>
+
+      <AtivarNotificacoes />
 
       <div className="space-y-3">
         {items.map((r, i) => (
@@ -66,7 +61,7 @@ export default function RemindersScreen() {
               <p className="text-base font-semibold" style={{ color: 'var(--brand-dark)' }}>{r.time}</p>
             </div>
             <button
-              onClick={() => setItems(prev => prev.map((item, idx) => idx === i ? { ...item, active: !item.active } : item))}
+              onClick={() => alternar(r.key, !r.active)}
               className="w-12 h-6 rounded-full relative transition-all shrink-0"
               style={{ background: r.active ? 'var(--primary)' : 'var(--border)' }}
             >

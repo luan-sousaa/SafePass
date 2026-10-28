@@ -36,7 +36,7 @@ offline via Tesseract (texto bruto, revisão manual sempre obrigatória nesse ca
 A confiança da leitura nunca é mostrada ao usuário como número — só como conclusão em
 linguagem natural, e serve de gatilho pro HITL (RF05): sempre que a confiança estiver
 baixa, houver suspeita de prompt injection na receita, ou o fallback offline tiver sido
-usado, o agente força `needs_manual_review=True`.
+usado, o agente força `precisa_revisar=True`.
 
 ## Como rodar (dentro de `agents/`)
 
@@ -73,5 +73,5 @@ como exemplo de spec (retroativa — a próxima deve vir antes do código).
   evite juntar responsabilidades num arquivo só.
 - Imagem de receita sempre passa por Artifact do ADK (`save_artifact`/`load_artifact`),
   nunca como bytes crus em `session.state`.
-- Número de confiança (`confidence`/`confidence_geral`) é interno — nunca deve aparecer
+- Número de confiança (`confianca`/`confianca_geral`) é interno — nunca deve aparecer
   na resposta ao usuário.

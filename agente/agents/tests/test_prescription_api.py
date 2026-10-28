@@ -1,5 +1,6 @@
 """Testa api/main.py — spec: specs/prescription-api.md."""
 
+from datetime import date
 from unittest.mock import patch
 
 import pytest
@@ -13,24 +14,24 @@ from services.prescription.extraction_service import (
     PrescriptionExtraction,
 )
 
-client = TestClient(app)
+client = TestClient(app, headers={"X-Usuario-Id": "ana"})
 
 JPEG = b"\xff\xd8\xff\xe0" + b"fake-jpeg"
 PNG = b"\x89PNG\r\n\x1a\n" + b"fake-png"
 URL = "/api/prescriptions/extract"
 
 
-def _result(medicamentos, needs_review=False, source="gemini", observacoes=None, **extra):
+def _result(medicamentos, needs_review=False, origem="gemini", observacoes=None, **extra):
     return ExtractionResult(
-        data=PrescriptionExtraction(medicamentos=medicamentos, confidence_geral=0.95, observacoes=observacoes, **extra),
-        needs_manual_review=needs_review,
-        low_confidence_fields=[],
-        source=source,
+        data=PrescriptionExtraction(medicamentos=medicamentos, confianca_geral=0.95, observacoes=observacoes, **extra),
+        precisa_revisar=needs_review,
+        campos_revisar=[],
+        origem=origem,
     )
 
 
-def _item(nome, confidence):
-    return MedicationItem(medicamento=nome, dose="500mg", posologia="1 cp 8/8h", periodo="5 dias", confidence=confidence)
+def _item(nome, confianca):
+    return MedicationItem(medicamento=nome, dose="500mg", posologia="1 cp 8/8h", periodo="5 dias", confianca=confianca)
 
 
 def test_returns_extracted_medications_ac1():
@@ -39,8 +40,8 @@ def test_returns_extracted_medications_ac1():
 
     assert response.status_code == 200
     body = response.json()
-    assert body["source"] == "gemini"
-    assert body["needs_manual_review"] is False
+    assert body["origem"] == "gemini"
+    assert body["precisa_revisar"] is False
     assert body["medicamentos"][0]["medicamento"] == "Dipirona"
     service.assert_called_once_with(JPEG, mime_type="image/jpeg")
 
@@ -53,18 +54,18 @@ def test_flags_low_confidence_items_without_exposing_numbers_ac2():
 
     medicamentos = response.json()["medicamentos"]
     assert [m["precisa_revisar"] for m in medicamentos] == [True, False]
-    assert "confidence" not in response.text
+    assert "confianca" not in response.text
 
 
 def test_fallback_is_a_successful_response_ac3():
-    result = _result([], needs_review=True, source="tesseract_fallback", observacoes="Dipirona 500mg")
+    result = _result([], needs_review=True, origem="tesseract", observacoes="Dipirona 500mg")
 
     with patch("api.main.extract_prescription", return_value=result):
         response = client.post(URL, files={"file": ("receita.jpg", JPEG, "image/jpeg")})
 
     assert response.status_code == 200
     body = response.json()
-    assert body["source"] == "tesseract_fallback"
+    assert body["origem"] == "tesseract"
     assert body["medicamentos"] == []
     assert body["observacoes"] == "Dipirona 500mg"
 
@@ -107,7 +108,7 @@ def test_requires_file_field_ec3():
     assert response.status_code == 422
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)  # o extract também grava (documento_ocr)
 def db(tmp_path, monkeypatch):
     monkeypatch.setenv("SAFEPASS_DB", str(tmp_path / "test.db"))
 
@@ -152,7 +153,9 @@ def test_lists_medications_with_schedule_ac8(db):
 
     meds = client.get("/api/medications").json()
 
-    assert meds == [{
+    # Campos que o front já usa; os novos estão em test_medicamentos_vacinas.
+    antigos = ["receita_id", "medico", "data_receita", "medicamento", "dose", "posologia", "periodo", "horarios"]
+    assert [{k: m[k] for k in antigos} for m in meds] == [{
         "receita_id": receita["id"],
         "medico": "Dr. Carlos Mendes",
         "data_receita": "2026-09-17",
@@ -162,7 +165,8 @@ def test_lists_medications_with_schedule_ac8(db):
 
 
 def test_lists_one_reminder_per_dose_time_ac9(db):
-    client.post("/api/prescriptions", json={**RECEITA, "medicamentos": [
+    hoje = date.today().isoformat()  # receita vencida não gera lembrete (spec medicamentos-vacinas, FR-4)
+    client.post("/api/prescriptions", json={**RECEITA, "data_receita": hoje, "medicamentos": [
         {"medicamento": "Amoxicilina", "dose": "500mg", "posologia": "2x ao dia", "periodo": "7 dias"},
         {"medicamento": "Dipirona", "dose": "500mg", "posologia": "se necessário", "periodo": ""},
     ]})
