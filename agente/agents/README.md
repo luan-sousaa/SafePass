@@ -45,16 +45,16 @@ tool: extract_prescription
 extraction_service (função pura, SEM agente ADK)
   → client.models.generate_content(imagem + prompt, response_schema=PrescriptionExtraction)
   → se a Gemini API falhar (sem rede/cota/erro): fallback offline via Tesseract
-    (texto bruto, sem estruturação automática, needs_manual_review sempre true)
+    (texto bruto, sem estruturação automática, precisa_revisar sempre true)
   → aplica security.review_guard (HITL como segurança) no caminho Gemini
-  → devolve ExtractionResult (dados + needs_manual_review + low_confidence_fields + source)
+  → devolve ExtractionResult (dados + precisa_revisar + campos_revisar + origem)
         │
         ▼
 after_tool_callback: review_guard_after_tool_callback
-  → grava needs_manual_review/low_confidence_fields no state da sessão
+  → grava precisa_revisar/campos_revisar no state da sessão
         │
         ▼
-root_agent responde ao usuário (nunca expõe o número de confidence,
+root_agent responde ao usuário (nunca expõe o número de confianca,
 só a conclusão em linguagem natural)
 ```
 
@@ -80,7 +80,7 @@ só a conclusão em linguagem natural)
    claramente legível.
 2. **Como segurança** (`security/review_guard.py`): não confia cegamente no que o modelo
    reporta. Se detectar um padrão de prompt injection no texto extraído, zera a confiança
-   daquele item e força `needs_manual_review=True` no resultado inteiro, mesmo que o
+   daquele item e força `precisa_revisar=True` no resultado inteiro, mesmo que o
    modelo tenha reportado alta confiança.
 
 O número de confiança nunca é mostrado ao usuário — o `root_agent` só comunica a
@@ -95,7 +95,7 @@ OCR local via Tesseract (`repositories/tesseract_ocr.py`). Nesse caminho:
 - Não há estruturação automática dos campos — regex/heurística sobre texto de receita
   médica é arriscado demais sem um LLM validando, então o texto bruto vai direto pro
   campo `observacoes` para o usuário conferir e preencher manualmente.
-- `needs_manual_review` vem sempre `true` e `source` vem `"tesseract_fallback"`, para o
+- `precisa_revisar` vem sempre `true` e `origem` vem `"tesseract"`, para o
   orquestrador explicar a situação ao usuário (sem revelar detalhe técnico do erro).
 - Requer o **binário do Tesseract instalado no sistema** (o pacote `pytesseract` é só um
   wrapper em Python, não inclui o motor de OCR) **e do pacote de idioma português** —

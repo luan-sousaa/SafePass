@@ -18,12 +18,12 @@ trabalho) e precisam ser escritos pelo squad.
 | 3 | Rotas de medicamentos e lembretes | **Feito** (`GET /api/medications`, `GET /api/reminders`) | `agente/agents/specs/prescription-api.md` FR-10 a FR-12 |
 | 3 | Rotas de cadastro, dependentes, documentos, histórico do chat | **Não existe**: não há autenticação nem usuário dono dos dados | — |
 | 3 | Como o front recebe o resultado do OCR | Resposta: requisição síncrona | [abaixo](#como-o-front-recebe-o-ocr) |
-| 3 | Justificar índices e a view de contexto | **[equipe/banco]**: hoje é SQLite com uma tabela `receitas` | `agente/agents/repositories/prescription_store.py` |
+| 3 | Justificar índices e a view de contexto | **[equipe/banco]**: hoje é SQLite com as tabelas `documento_ocr` e `receitas` | `agente/agents/repositories/prescription_store.py` |
 | 4 | Estrutura de pastas e diagrama de arquitetura | Pronto | [abaixo](#arquitetura) |
-| 4 | Um único comportamento de falha do OCR | Pronto (é o que está implementado) | [abaixo](#falha-do-ocr-um-fluxo-só) |
+| 4 | Um único comportamento de falha do OCR | Pronto: implementado e gravado em `documento_ocr` (`status`, `origem`) | [abaixo](#falha-do-ocr-um-fluxo-só) |
 | 4 | Onde entra o Tesseract e como a latência é tratada | Pronto | [abaixo](#falha-do-ocr-um-fluxo-só) |
 | 5 | Prompt do assistente virtual + versões dos prompts | Prompt do orquestrador existe; o do assistente (Épico 5) não | [abaixo](#prompts-e-versões) |
-| 5 | Alinhar `score_confianca` × `confianca`/`campos_revisar` | Pronto: o documento adota os nomes do código | [abaixo](#nomes-dos-campos) |
+| 5 | Alinhar `score_confianca` × `confianca`/`campos_revisar` | Pronto: prompt, API, banco e specs usam os mesmos nomes em pt-BR | [abaixo](#nomes-dos-campos) |
 | 5 | Divisão de trabalho, dificuldades, uso de IA | **[equipe]**; evidências abaixo | [abaixo](#evidências-de-implementação) |
 | — | Remover "[cite: 4, 20]" (§6.1) e padronizar em pt-BR | **[equipe]**: revisão do texto | — |
 
@@ -100,28 +100,37 @@ flowchart LR
   olhando para ele.
 - **Latência:** o client do Gemini repete até 3 vezes em 408/429/5xx (backoff de 1 s
   até 8 s, em `agente/agents/config/gemini_config.py`); o front corta em 60 s.
-- **Modelo de dados:** nada é gravado antes da confirmação, então não há status "erro"
-  nem fila. Na tabela `documento_ocr` bastam `origem` (`gemini` | `tesseract_fallback`)
-  e `status` (`pendente_revisao` → `confirmado`).
+- **Modelo de dados** (implementado, spec `agente/agents/specs/documento-ocr.md`): cada
+  leitura vira um registro em `documento_ocr`, que guarda separados o que a IA extraiu
+  (`extraido`) e o que o usuário confirmou (`confirmado`).
+  - `status`: `processando` → `revisao` → `confirmado`. Não existe status de erro nem
+    modo de espera: falha do Gemini vira `origem = tesseract` em `revisao`.
+  - `origem`: `gemini` | `tesseract` | `manual` (o usuário digitou sem enviar foto).
+  - `confianca` (a geral da leitura) e `campos_revisar` ficam só no banco.
+  - A "fila" são os registros que não chegaram a `confirmado`: `processando` é leitura
+    interrompida no meio, e `revisao` é leitura esperando o usuário.
+  - A confirmação grava o `confirmado`, muda o status e cria a receita ligada
+    (`receitas.documento_ocr_id`) numa única transação.
 
 ## Nomes dos campos
 
-O documento passa a usar os nomes do código:
+Prompt, serviço, API, banco e specs usam os mesmos nomes em pt-BR:
 
 | Onde | Campo |
 |---|---|
-| Saída do prompt (interno) | `confidence` por medicamento, `confidence_geral` na receita |
-| Resposta da API ao front | `precisa_revisar: bool` por medicamento, `needs_manual_review: bool` na receita, `source` |
+| Saída do prompt (interno) | `confianca` por medicamento, `confianca_geral` na receita |
+| Banco (`documento_ocr`) | `confianca`, `campos_revisar`, `origem`, `status` |
+| Resposta da API ao front | `precisa_revisar: bool` por medicamento e na receita, `origem`, `documento_ocr_id` |
 
-O número de confiança **nunca** sai da API; o front só recebe o booleano. Trocar
-`score_confianca`, `confianca` e `campos_revisar` no documento por esses nomes.
+O número de confiança **nunca** sai da API; o front só recebe o booleano. No documento,
+trocar `score_confianca` por `confianca`.
 
 ## Prompts e versões
 
 | Prompt | Arquivo | Versões |
 |---|---|---|
-| Extração de receita | `agente/agents/prompts/extract_prescription_prompt.py` | v1 (2026-09-17, `919d0f0`), extração e regras de confiança; v2 (2026-09-17, `ddf7a33`), qualidade da imagem e prompt injection; v3 (2026-10-18, `a0d117c`), + `medico` e `data_receita` |
-| Orquestrador (chat do agente ADK) | `agente/agents/prompts/orchestrator_prompt.py` | v1 (2026-09-17, `919d0f0`); v2 (2026-09-17, `890cb8a`), esconde do usuário os detalhes do fallback |
+| Extração de receita | `agente/agents/prompts/extract_prescription_prompt.py` | v1 (2026-09-17, `919d0f0`), extração e regras de confiança; v2 (2026-09-17, `ddf7a33`), qualidade da imagem e prompt injection; v3 (2026-10-18, `a0d117c`), + `medico` e `data_receita`; v4 (2026-10-28), nomes em pt-BR (`confianca`, `confianca_geral`) |
+| Orquestrador (chat do agente ADK) | `agente/agents/prompts/orchestrator_prompt.py` | v1 (2026-09-17, `919d0f0`); v2 (2026-09-17, `890cb8a`), esconde do usuário os detalhes do fallback; v3 (2026-10-28), nomes em pt-BR e `status "error"` deixa claro que é foto ausente, não falha da leitura |
 | Assistente virtual (Épico 5) | — | **não existe**; o chat do front responde com textos fixos |
 
 O texto completo de cada prompt está no arquivo e pode ser colado no documento. O
@@ -178,6 +187,6 @@ histórico do chat. Todas dependem de existir um usuário dono dos dados (autent
 ## Evidências de implementação
 
 - Repositório com histórico de PRs (#4 validação do OCR, #5 API de receitas).
-- 43 testes automatizados passando (`cd agente/agents && .venv/bin/pytest`).
+- 51 testes automatizados passando (`cd agente/agents && .venv/bin/pytest`).
 - Fluxo real funcionando: foto → revisão → salvar → aparece em Medicamentos, Histórico
   e Lembretes. **[equipe]** Tirar prints dessas telas para o documento.
