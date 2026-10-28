@@ -3,6 +3,19 @@
 Base: devolutiva da entrega parcial (6,75) cruzada com o repositório em `3c187ed`
 (ver `docs/devolutiva-entrega-parcial.md`). Organização por frente, não por pessoa.
 
+## Status em 28/10
+
+Já na main (PRs #8 a #13):
+
+- `documento_ocr` com status único e origem; nomes alinhados entre prompt, API e front (#8)
+- Repositório documental por usuário e dependente, download, compartilhamento com o assistente e `GET /api/assistente/contexto`; contrato em `docs/contrato-assistente-ia.md` (#10)
+- Telas Documentos, Dependentes e Início sem mocks; dono da receita (#11)
+- Bugs do teste ponta a ponta (#9)
+- Alertas no navegador com o app aberto (#12)
+- Medicamento manual com vigência e vacinas com lembrete da próxima dose (#13)
+
+Ainda em SQLite e com usuário por header de dev (`X-Usuario-Id`) até fechar o contrato com o LOGIN.
+
 ## Dependências externas
 
 O SAFEpass precisa de dois outros grupos da residência. Enquanto o contrato não fecha,
