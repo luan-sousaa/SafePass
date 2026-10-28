@@ -3,11 +3,11 @@ from typing import Annotated, Optional
 from fastapi import FastAPI, HTTPException, UploadFile
 from pydantic import BaseModel, Field, StringConstraints
 
-from api import documentos
+from api import documentos, saude
 from api.deps import IMAGENS, MAX_UPLOAD_BYTES, UsuarioAtual, ler_arquivo  # noqa: F401 (MAX_UPLOAD_BYTES: testes)
 from config.confidence_config import CONFIDENCE_THRESHOLD
-from repositories import documento_store, prescription_store
-from services.prescription.dose_schedule import horarios
+from api.saude import LembreteOut, MedicamentoSalvoOut, VacinaOut
+from repositories import documento_store, prescription_store, saude_store
 from services.prescription.extraction_service import extract_prescription
 
 class MedicamentoOut(BaseModel):
@@ -48,24 +48,6 @@ class ReceitaOut(ReceitaIn):
     criado_em: str
 
 
-class MedicamentoSalvoOut(BaseModel):
-    receita_id: int
-    medico: Optional[str]
-    data_receita: Optional[str]
-    medicamento: str
-    dose: str
-    posologia: str
-    periodo: str
-    horarios: list[str]
-
-
-class LembreteOut(BaseModel):
-    medicamento: str
-    dose: str
-    periodo: str
-    horario: str
-
-
 class DocumentoContextoOut(BaseModel):
     id: int
     tipo: str
@@ -79,10 +61,12 @@ class ContextoOut(BaseModel):
     documentos: list[DocumentoContextoOut]
     medicamentos: list[MedicamentoSalvoOut]
     lembretes: list[LembreteOut]
+    vacinas: list[VacinaOut]
 
 
 app = FastAPI(title="SAFEpass — API de extração de receitas")
 app.include_router(documentos.router)
+app.include_router(saude.router)
 
 
 @app.post("/api/prescriptions/extract", response_model=ExtracaoOut)
@@ -131,33 +115,13 @@ def list_saved(usuario_id: UsuarioAtual) -> list[dict]:
     return prescription_store.listar(usuario_id)
 
 
-def _medicamentos(receitas: list[dict]) -> list[dict]:
-    return [
-        {"receita_id": r["id"], "medico": r["medico"], "data_receita": r["data_receita"], **m, "horarios": horarios(m["posologia"])}
-        for r in receitas
-        for m in r["medicamentos"]
-    ]
-
-
-def _lembretes(medicamentos: list[dict]) -> list[dict]:
-    return [{**m, "horario": h} for m in medicamentos for h in m["horarios"]]
-
-
-@app.get("/api/medications", response_model=list[MedicamentoSalvoOut])
-def list_medications(usuario_id: UsuarioAtual) -> list[dict]:
-    return _medicamentos(prescription_store.listar(usuario_id))
-
-
-@app.get("/api/reminders", response_model=list[LembreteOut])
-def list_reminders(usuario_id: UsuarioAtual) -> list[dict]:
-    return _lembretes(_medicamentos(prescription_store.listar(usuario_id)))
-
-
 @app.get("/api/assistente/contexto", response_model=ContextoOut)
 def assistant_context(usuario_id: UsuarioAtual, dependente_id: Optional[int] = None) -> dict:
-    """Só o que o usuário compartilhou com o assistente (spec repositorio-documentos, FR-9)."""
+    """Só o que o usuário compartilhou com o assistente (specs repositorio-documentos FR-9 e medicamentos-vacinas FR-8)."""
     documentos.exigir_dependente(usuario_id, dependente_id)
     compartilhados = documento_store.listar_documentos(usuario_id, dependente_id=dependente_id, compartilhados=True)
     leituras = {d["documento_ocr_id"] for d in compartilhados if d["documento_ocr_id"] is not None}
-    medicamentos = _medicamentos([r for r in prescription_store.listar(usuario_id) if r["documento_ocr_id"] in leituras])
-    return {"documentos": compartilhados, "medicamentos": medicamentos, "lembretes": _lembretes(medicamentos)}
+    medicamentos = saude.medicamentos_das_receitas([r for r in prescription_store.listar(usuario_id) if r["documento_ocr_id"] in leituras])
+    vacinas = saude_store.listar_vacinas(usuario_id, dependente_id=dependente_id, compartilhadas=True)
+    pendentes = saude_store.listar_vacinas(usuario_id, dependente_id=dependente_id, compartilhadas=True, pendentes=True)
+    return {"documentos": compartilhados, "medicamentos": medicamentos, "lembretes": saude.lembretes(medicamentos, pendentes), "vacinas": vacinas}

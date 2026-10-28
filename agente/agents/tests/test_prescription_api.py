@@ -1,5 +1,6 @@
 """Testa api/main.py — spec: specs/prescription-api.md."""
 
+from datetime import date
 from unittest.mock import patch
 
 import pytest
@@ -152,7 +153,9 @@ def test_lists_medications_with_schedule_ac8(db):
 
     meds = client.get("/api/medications").json()
 
-    assert meds == [{
+    # Campos que o front já usa; os novos estão em test_medicamentos_vacinas.
+    antigos = ["receita_id", "medico", "data_receita", "medicamento", "dose", "posologia", "periodo", "horarios"]
+    assert [{k: m[k] for k in antigos} for m in meds] == [{
         "receita_id": receita["id"],
         "medico": "Dr. Carlos Mendes",
         "data_receita": "2026-09-17",
@@ -162,7 +165,8 @@ def test_lists_medications_with_schedule_ac8(db):
 
 
 def test_lists_one_reminder_per_dose_time_ac9(db):
-    client.post("/api/prescriptions", json={**RECEITA, "medicamentos": [
+    hoje = date.today().isoformat()  # receita vencida não gera lembrete (spec medicamentos-vacinas, FR-4)
+    client.post("/api/prescriptions", json={**RECEITA, "data_receita": hoje, "medicamentos": [
         {"medicamento": "Amoxicilina", "dose": "500mg", "posologia": "2x ao dia", "periodo": "7 dias"},
         {"medicamento": "Dipirona", "dose": "500mg", "posologia": "se necessário", "periodo": ""},
     ]})

@@ -39,7 +39,7 @@ def _dependente(cliente, nome="Pedro", parentesco="Filho"):
 
 def _receita_via_ocr(cliente, nome, **extra):
     """Foto → extract → confirmação; devolve o documento tipo receita criado."""
-    item = MedicationItem(medicamento=nome, dose="500mg", posologia="2x ao dia", periodo="7 dias", confianca=0.95)
+    item = MedicationItem(medicamento=nome, dose="500mg", posologia="2x ao dia", periodo="uso contínuo", confianca=0.95)
     result = ExtractionResult(
         data=PrescriptionExtraction(medicamentos=[item], confianca_geral=0.95, medico="Dr. Carlos", data_receita="2026-09-17"),
         precisa_revisar=False,
@@ -53,7 +53,7 @@ def _receita_via_ocr(cliente, nome, **extra):
         "documento_ocr_id": extracao["documento_ocr_id"],
         "medico": "Dr. Carlos",
         "data_receita": "2026-09-17",
-        "medicamentos": [{"medicamento": nome, "dose": "500mg", "posologia": "2x ao dia", "periodo": "7 dias"}],
+        "medicamentos": [{"medicamento": nome, "dose": "500mg", "posologia": "2x ao dia", "periodo": "uso contínuo"}],
         **extra,
     })
     return next(d for d in cliente.get("/api/documentos", params={"tipo": "receita"}).json() if d["titulo"] == nome)
