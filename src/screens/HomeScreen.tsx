@@ -1,23 +1,24 @@
 import Icon, { type IconName } from '../components/Icon';
 import type { Screen } from '../types';
-
-const recentDocs = [
-  { type: 'Receita', name: 'Omeprazol 20mg', date: '18 set 2026' },
-  { type: 'Exame', name: 'Hemograma Completo', date: '12 set 2026' },
-  { type: 'Consulta', name: 'Cardiologia – Dr. Farias', date: '05 set 2026' },
-  { type: 'Vacina', name: 'Influenza 2026', date: '02 set 2026' },
-];
-
-const upcomingReminders = [
-  { time: 'Hoje, 08:00', label: 'Omeprazol 20mg', type: 'Medicamento' },
-  { time: 'Hoje, 19:00', label: 'Vitamina D 2000UI', type: 'Medicamento' },
-  { time: 'Amanhã, 14:30', label: 'Consulta – Dermatologia', type: 'Consulta' },
-  { time: '28 set, 09:00', label: 'Exame de sangue', type: 'Exame' },
-];
+import { formatarData, nomeDono, tipoLabel, useDependentes, useDocumentos } from '../services/documentos';
+import { useLembretes, useMedicamentos } from '../services/prescriptions';
 
 export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) => void; user: { name: string } }) {
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Bom dia' : hour < 18 ? 'Boa tarde' : 'Boa noite';
+
+  const docs = useDocumentos();
+  const medicamentos = useMedicamentos();
+  const lembretes = useLembretes();
+  const dependentes = useDependentes();
+
+  const recentDocs = docs.slice(0, 4); // a API já devolve o mais recente primeiro
+  // Os lembretes são horários diários: os que já passaram hoje voltam amanhã.
+  const agora = new Date().toTimeString().slice(0, 5);
+  const upcomingReminders = lembretes
+    .flatMap(l => (l.horario ? [{ ...l, horario: l.horario, amanha: l.horario <= agora }] : [])) // vacina não tem hora
+    .sort((a, b) => Number(a.amanha) - Number(b.amanha) || a.horario.localeCompare(b.horario))
+    .slice(0, 4);
 
   return (
     <div className="max-w-7xl mx-auto space-y-6 animate-fade-in">
@@ -39,10 +40,10 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
       {/* Summary cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
-          { label: 'Documentos', value: '47', icon: 'document' as IconName, nav: 'documents' as Screen },
-          { label: 'Medicamentos', value: '5', icon: 'medication' as IconName, nav: 'medications' as Screen },
-          { label: 'Lembretes', value: '3', icon: 'reminder' as IconName, nav: 'reminders' as Screen },
-          { label: 'Dependentes', value: '2', icon: 'users' as IconName, nav: 'dependents' as Screen },
+          { label: 'Documentos', value: docs.length, icon: 'document' as IconName, nav: 'documents' as Screen },
+          { label: 'Medicamentos', value: medicamentos.length, icon: 'medication' as IconName, nav: 'medications' as Screen },
+          { label: 'Lembretes', value: lembretes.length, icon: 'reminder' as IconName, nav: 'reminders' as Screen },
+          { label: 'Dependentes', value: dependentes.length, icon: 'users' as IconName, nav: 'dependents' as Screen },
         ].map(card => (
           <button
             key={card.label}
@@ -74,17 +75,18 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
             </button>
           </div>
           <div className="space-y-3">
-            {recentDocs.map((doc, i) => (
-              <div key={i} className="flex items-center gap-4 px-3 py-2.5 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
+            {recentDocs.length === 0 && <EmptyLine text="Nenhum documento ainda." />}
+            {recentDocs.map(doc => (
+              <div key={doc.id} className="flex items-center gap-4 px-3 py-2.5 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
                 <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
                   <Icon name="document" className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>{doc.name}</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>{doc.type} · {doc.date}</p>
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>{doc.titulo}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>{nomeDono(doc.dono)} · {formatarData(doc.data_documento)}</p>
                 </div>
                 <span className="text-xs font-medium" style={{ color: 'var(--muted-foreground)' }}>
-                  {doc.type}
+                  {tipoLabel(doc.tipo)}
                 </span>
               </div>
             ))}
@@ -102,16 +104,17 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
             </button>
           </div>
           <div className="space-y-3">
+            {upcomingReminders.length === 0 && <EmptyLine text="Nenhum lembrete. Eles vêm das receitas salvas." />}
             {upcomingReminders.map((r, i) => (
               <div key={i} className="flex items-center gap-4 px-3 py-2.5 border-b last:border-b-0" style={{ borderColor: 'var(--border)' }}>
                 <div className="w-8 h-8 rounded-md flex items-center justify-center shrink-0" style={{ background: 'var(--muted)', color: 'var(--brand)' }}>
                   <Icon name="reminder" className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>{r.label}</p>
-                  <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>{r.type}</p>
+                  <p className="text-sm font-medium truncate" style={{ color: 'var(--foreground)' }}>{`${r.medicamento} ${r.dose}`.trim()}</p>
+                  <p className="text-xs mt-0.5" style={{ color: 'var(--muted-foreground)' }}>Medicamento</p>
                 </div>
-                <p className="text-xs font-medium shrink-0" style={{ color: 'var(--muted-foreground)' }}>{r.time}</p>
+                <p className="text-xs font-medium shrink-0" style={{ color: 'var(--muted-foreground)' }}>{r.amanha ? 'Amanhã' : 'Hoje'}, {r.horario}</p>
               </div>
             ))}
           </div>
@@ -171,4 +174,8 @@ export default function HomeScreen({ navigate, user }: { navigate: (s: Screen) =
       </div>
     </div>
   );
+}
+
+function EmptyLine({ text }: { text: string }) {
+  return <p className="px-3 py-2.5 text-sm" style={{ color: 'var(--muted-foreground)' }}>{text}</p>;
 }

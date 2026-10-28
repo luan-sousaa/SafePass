@@ -2,8 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import type { Screen } from '../types';
 import Icon, { type IconName } from '../components/Icon';
 import { extractPrescription, savePrescription, type Medicamento } from '../services/prescriptions';
+import { enviarDocumento, tiposDocumento, useDependentes, type TipoDocumento } from '../services/documentos';
 
-type Step = 'choose' | 'analyzing' | 'review' | 'error' | 'manual';
+type Step = 'choose' | 'analyzing' | 'review' | 'error' | 'manual' | 'other';
 
 const emptyItem: Medicamento = { medicamento: '', dose: '', posologia: '', periodo: '', precisa_revisar: false };
 
@@ -29,6 +30,8 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
   const [items, setItems] = useState<Medicamento[]>([emptyItem]);
   const [date, setDate] = useState('');
   const [medico, setMedico] = useState('');
+  const [dono, setDono] = useState('');
+  const dependentes = useDependentes();
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
   const [preview, setPreview] = useState<string | null>(null);
@@ -80,6 +83,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
     setItems([emptyItem]);
     setMedico('');
     setDate('');
+    setDono('');
     setStep('choose');
   };
 
@@ -92,6 +96,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
         documento_ocr_id: documentoOcrId,
         medico: medico.trim() || null,
         data_receita: date || null,
+        dependente_id: dono ? Number(dono) : null,
         medicamentos: items.map(({ precisa_revisar: _, ...item }) => item),
       });
       navigate('medications');
@@ -106,9 +111,10 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
 
   if (step === 'choose') {
     const options: { icon: IconName; title: string; hint: string; onClick: () => void }[] = [
-      { icon: 'camera', title: 'Tirar foto', hint: 'Use a câmera do seu dispositivo', onClick: () => cameraInput.current?.click() },
-      { icon: 'folder', title: 'Enviar arquivo', hint: 'JPG ou PNG de até 10 MB', onClick: () => fileInput.current?.click() },
-      { icon: 'edit', title: 'Preencher manualmente', hint: 'Digite as informações diretamente', onClick: () => setStep('manual') },
+      { icon: 'camera', title: 'Tirar foto da receita', hint: 'A IA lê os medicamentos pela câmera', onClick: () => cameraInput.current?.click() },
+      { icon: 'folder', title: 'Enviar foto da receita', hint: 'JPG ou PNG de até 10 MB, lida pela IA', onClick: () => fileInput.current?.click() },
+      { icon: 'edit', title: 'Digitar receita', hint: 'Preencha os medicamentos diretamente', onClick: () => setStep('manual') },
+      { icon: 'document', title: 'Exame, consulta, vacina ou atestado', hint: 'Guarde o arquivo (JPG, PNG ou PDF) e classifique', onClick: () => setStep('other') },
     ];
 
     return (
@@ -156,6 +162,8 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
       </div>
     );
   }
+
+  if (step === 'other') return <OtherDocumentForm navigate={navigate} onBack={() => setStep('choose')} />;
 
   if (step === 'analyzing') {
     return (
@@ -302,6 +310,13 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
             </Field>
           </div>
 
+          <Field label="De quem é">
+            <select value={dono} onChange={e => setDono(e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }}>
+              <option value="">Minha</option>
+              {dependentes.map(d => <option key={d.id} value={d.id}>{d.nome} ({d.parentesco})</option>)}
+            </select>
+          </Field>
+
           {saveError && <Banner tone="warn" title="Não foi possível salvar" text={saveError} />}
 
           <div className="flex gap-3 pt-2">
@@ -312,6 +327,79 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
           </div>
         </form>
       </div>
+    </div>
+  );
+}
+
+/** Documento sem OCR: só guarda o arquivo com classificação, título, data e dono. */
+function OtherDocumentForm({ navigate, onBack }: { navigate: (s: Screen) => void; onBack: () => void }) {
+  const dependentes = useDependentes();
+  const [arquivo, setArquivo] = useState<File | null>(null);
+  const [tipo, setTipo] = useState<TipoDocumento>('exame');
+  const [titulo, setTitulo] = useState('');
+  const [data, setData] = useState('');
+  const [dono, setDono] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState('');
+
+  const save = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!arquivo) return;
+    setSaving(true);
+    setSaveError('');
+    try {
+      await enviarDocumento({ arquivo, tipo, titulo: titulo.trim(), data_documento: data, dependente_id: dono ? Number(dono) : null });
+      navigate('documents');
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Não foi possível enviar o documento.');
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="max-w-lg mx-auto animate-slide-up">
+      <form className="rounded-lg p-6 space-y-5" style={cardStyle} onSubmit={save}>
+        <h2 className="text-2xl font-semibold" style={{ color: 'var(--brand-dark)' }}>Enviar documento</h2>
+
+        <Field label="Arquivo">
+          <input
+            type="file"
+            required
+            accept="image/jpeg,image/png,application/pdf"
+            onChange={e => setArquivo(e.target.files?.[0] ?? null)}
+            className={`${inputClass} file:mr-3 file:border-0 file:bg-transparent file:font-semibold file:text-[var(--brand)]`}
+            style={{ color: 'var(--foreground)' }}
+          />
+        </Field>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Classificação">
+            <select value={tipo} onChange={e => setTipo(e.target.value as TipoDocumento)} className={inputClass} style={{ color: 'var(--foreground)' }}>
+              {tiposDocumento.filter(t => t.value !== 'receita').map(t => <option key={t.value} value={t.value}>{t.label}</option>)}
+            </select>
+          </Field>
+          <Field label="Data do documento">
+            <input type="date" value={data} onChange={e => setData(e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }} />
+          </Field>
+        </div>
+        <Field label="Título">
+          <input type="text" required value={titulo} placeholder="Ex.: Hemograma completo" onChange={e => setTitulo(e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }} />
+        </Field>
+        <Field label="De quem é">
+          <select value={dono} onChange={e => setDono(e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }}>
+            <option value="">Meu</option>
+            {dependentes.map(d => <option key={d.id} value={d.id}>{d.nome} ({d.parentesco})</option>)}
+          </select>
+        </Field>
+
+        {saveError && <Banner tone="warn" title="Não foi possível enviar" text={saveError} />}
+
+        <div className="flex gap-3 pt-2">
+          <button type="button" onClick={onBack} className={`flex-1 ${btnSecondary}`}>Voltar</button>
+          <button type="submit" disabled={saving} className={`flex-1 ${btnPrimary} disabled:opacity-60`}>
+            {saving ? 'Enviando...' : 'Salvar documento'}
+          </button>
+        </div>
+      </form>
     </div>
   );
 }

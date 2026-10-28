@@ -21,6 +21,7 @@ export type Extracao = {
 
 export type ReceitaIn = {
   documento_ocr_id: number | null; // null = preenchimento manual
+  dependente_id: number | null; // dono da receita; null = o próprio usuário
   medico: string | null;
   data_receita: string | null;
   medicamentos: Omit<Medicamento, 'precisa_revisar'>[];
@@ -68,7 +69,8 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     });
   } catch (err) {
     throw new Error(
-      err instanceof DOMException && err.name === 'TimeoutError'
+      // Safari rejeita o AbortSignal.timeout com AbortError em vez de TimeoutError.
+      err instanceof DOMException && (err.name === 'TimeoutError' || err.name === 'AbortError')
         ? 'O serviço demorou demais para responder. Tente novamente.'
         : 'Não foi possível conectar ao serviço. Verifique sua conexão.',
     );
@@ -80,7 +82,9 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(typeof detail === 'string' ? detail : 'O serviço está indisponível no momento.');
   }
 
-  return res.status === 204 ? (undefined as T) : res.json();
+  if (res.status === 204) return undefined as T;
+  // Arquivo (download de documento) volta como Blob; o resto da API é JSON.
+  return res.headers.get('Content-Type')?.includes('application/json') ? res.json() : (res.blob() as Promise<T>);
 }
 
 export function extractPrescription(file: File): Promise<Extracao> {

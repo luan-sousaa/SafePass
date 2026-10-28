@@ -1,28 +1,24 @@
-import { useState } from 'react';
 import Icon from '../components/Icon';
+import { AtivarNotificacoes } from '../components/Alertas';
+import { chaveDoLembrete, useLembretesLigados } from '../services/alertas';
 import { useLembretes } from '../services/prescriptions';
 import { dataBR, useDependentes } from '../services/saude';
 
 export default function RemindersScreen() {
-  const [desligados, setDesligados] = useState<Set<number>>(new Set());
+  // O liga/desliga é o mesmo que o agendador dos avisos lê.
+  const [ligados, alternar] = useLembretesLigados();
   const nomes = new Map(useDependentes().map(d => [d.id, d.nome]));
 
-  const items = useLembretes().map((l, i) => ({
+  const items = useLembretes().map(l => ({
+    key: chaveDoLembrete(l),
     time: l.horario ?? (l.data ? dataBR(l.data) : ''),
     label: `${l.medicamento} ${l.dose}`.trim(),
     type: l.tipo === 'vacina' ? 'Vacina — próxima dose' : 'Medicamento',
     days: [l.tipo === 'medicamento' && (l.periodo ? `Diário por ${l.periodo}` : 'Diário'), l.dependente_id && nomes.get(l.dependente_id)]
       .filter(Boolean)
       .join(' · '),
-    active: !desligados.has(i),
+    active: ligados[chaveDoLembrete(l)] ?? true,
   }));
-
-  const alternar = (i: number) =>
-    setDesligados(prev => {
-      const next = new Set(prev);
-      if (!next.delete(i)) next.add(i);
-      return next;
-    });
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -35,6 +31,8 @@ export default function RemindersScreen() {
           + Novo lembrete
         </button>
       </div>
+
+      <AtivarNotificacoes />
 
       <div className="space-y-3">
         {items.map((r, i) => (
@@ -63,7 +61,7 @@ export default function RemindersScreen() {
               <p className="text-base font-semibold" style={{ color: 'var(--brand-dark)' }}>{r.time}</p>
             </div>
             <button
-              onClick={() => alternar(i)}
+              onClick={() => alternar(r.key, !r.active)}
               className="w-12 h-6 rounded-full relative transition-all shrink-0"
               style={{ background: r.active ? 'var(--primary)' : 'var(--border)' }}
             >

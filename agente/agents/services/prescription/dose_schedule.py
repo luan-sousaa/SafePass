@@ -5,21 +5,31 @@ PRIMEIRA_DOSE_HORA = 8  # ponytail: 1ª dose fixa às 08:00; vira campo quando o
 _CONDICIONAL = re.compile(r"(?<![-\w])se\s|\bsos\b", re.IGNORECASE)
 _INTERVALO = re.compile(r"(\d+)\s*/\s*\d+\s*h|cada\s+(\d+)\s*h|de\s+(\d+)\s+em\s+\d+\s*h", re.IGNORECASE)
 _POR_DIA = re.compile(r"(\d+|uma|duas|tr[eê]s|quatro)\s*(?:x|vez(?:es)?)\s*(?:ao|por)\s*dia", re.IGNORECASE)
+_AO_DIA = re.compile(r"\b(?:ao|por)\s+dia\b", re.IGNORECASE)  # "1 cp ao dia": dose única
 _NUMEROS = {"uma": 1, "duas": 2, "tres": 3, "três": 3, "quatro": 4}
+# Noite e "ao deitar" às 20:00, o mesmo horário da 2ª dose de 12/12h (FR-15).
+_MOMENTOS = ((re.compile(r"manh[ãa]", re.IGNORECASE), "08:00"), (re.compile(r"noite|deitar", re.IGNORECASE), "20:00"))
 
 
 def horarios(posologia: str) -> list[str]:
-    """Horários "HH:MM" das doses do dia, calculados da posologia (spec prescription-api, FR-12).
+    """Horários "HH:MM" das doses do dia, calculados da posologia (spec prescription-api, FR-12 e FR-15).
 
     Posologia condicional ou sem frequência reconhecível devolve [] — não inventa horário.
     """
     if _CONDICIONAL.search(posologia):
         return []
 
+    if m := _POR_DIA.search(posologia):
+        vezes = _NUMEROS.get(m.group(1).lower()) or int(m.group(1))
+    else:
+        vezes = 1 if _AO_DIA.search(posologia) else 0
+    momentos = [hora for padrao, hora in _MOMENTOS if padrao.search(posologia)]
+
     if m := _INTERVALO.search(posologia):
         intervalo = int(next(g for g in m.groups() if g))
-    elif m := _POR_DIA.search(posologia):
-        vezes = _NUMEROS.get(m.group(1).lower()) or int(m.group(1))
+    elif momentos and vezes <= 1:  # "pela noite", "1x ao dia à noite" (FR-15)
+        return momentos
+    elif vezes:
         intervalo = 24 // vezes if 0 < vezes <= 24 else 0
     else:
         return []
