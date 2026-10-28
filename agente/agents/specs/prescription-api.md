@@ -53,6 +53,9 @@ conversacional, porque a tela de revisão precisa de JSON, não de texto.
 - **FR-13** (2026-10-28): A extração MUST gravar a leitura em `documento_ocr` e devolver
   `documento_ocr_id`; o `POST /api/prescriptions` MAY recebê-lo para confirmar aquela
   leitura. Regras, status e origem na spec `documento-ocr`.
+- **FR-14** (2026-10-28): Toda rota MUST exigir o usuário (`X-Usuario-Id` em dev, 401 sem
+  ele) e receitas, medicamentos e lembretes MUST ser só do usuário atual. Detalhes na
+  spec `repositorio-documentos`, FR-1/FR-2.
 
 ## Interface / contrato
 
@@ -73,11 +76,12 @@ Content-Type: multipart/form-data   (campo: file)
 (o 200 também traz "medico": str | null e "data_receita": "AAAA-MM-DD" | null — FR-6)
 
 POST /api/prescriptions
-{"documento_ocr_id": int | null, "medico": str | null, "data_receita": "AAAA-MM-DD" | null,
+{"documento_ocr_id": int | null, "dependente_id": int | null, "medico": str | null, "data_receita": "AAAA-MM-DD" | null,
  "medicamentos": [{"medicamento": str, "dose": str, "posologia": str, "periodo": str}]}  (mín. 1)
 201 {"id": int, "criado_em": str (ISO 8601), "documento_ocr_id": int, ...os campos enviados}
 422 sem medicamentos ou medicamento com nome vazio
 409 documento_ocr_id inexistente ou já confirmado (FR-13)
+404 dependente_id que não é dependente do usuário (spec repositorio-documentos, FR-10)
 
 GET /api/prescriptions
 200 [ {mesmo formato do 201}, ... ]   (mais recente primeiro)
@@ -136,7 +140,6 @@ Rodar (de dentro de `agents/`): `uvicorn api.main:app --reload --port 8000`
 - **PDF**: o fallback Tesseract não lê PDF; entra numa spec futura se o squad quiser.
 - **Banco definitivo** (PostgreSQL, schema normalizado, migrações): frente de banco do
   squad — ver FR-9. Hoje os medicamentos ficam numa coluna JSON.
-- **Usuário dono da receita**: entra junto com a autenticação.
 - **Chat via orquestrador (`root_agent`)**: o front ainda não precisa; quando precisar,
   avaliar `adk api_server`.
 - **CORS e autenticação**: em dev o front usa proxy do Vite (mesma origem); auth entra

@@ -13,7 +13,7 @@ from services.prescription.extraction_service import (
     PrescriptionExtraction,
 )
 
-client = TestClient(app)
+client = TestClient(app, headers={"X-Usuario-Id": "ana"})
 
 JPEG = b"\xff\xd8\xff\xe0" + b"fake-jpeg"
 PNG = b"\x89PNG\r\n\x1a\n" + b"fake-png"

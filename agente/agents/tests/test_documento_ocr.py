@@ -16,7 +16,7 @@ from services.prescription.extraction_service import (
     PrescriptionExtraction,
 )
 
-client = TestClient(app)
+client = TestClient(app, headers={"X-Usuario-Id": "ana"})
 
 JPEG = b"\xff\xd8\xff\xe0" + b"fake-jpeg"
 URL = "/api/prescriptions/extract"
@@ -149,4 +149,7 @@ def test_adds_link_column_to_old_database_ec2(tmp_path):
 
     client.post("/api/prescriptions", json=RECEITA)
 
-    assert [r["documento_ocr_id"] is None for r in client.get("/api/prescriptions").json()] == [False, True]
+    # A receita antiga continua no banco, sem leitura nem dono (spec repositorio-documentos, EC-5).
+    with prescription_store._connect() as conn:
+        rows = conn.execute("SELECT documento_ocr_id IS NULL, usuario_id FROM receitas ORDER BY id").fetchall()
+    assert [tuple(r) for r in rows] == [(1, None), (0, "ana")]

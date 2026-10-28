@@ -21,5 +21,6 @@ venv/
 Thumbs.db
 .DS_Store
 
-# Banco local provisório (repositories/prescription_store.py)
+# Banco local provisório (repositories/database.py) e arquivos enviados (repositories/documento_store.py)
 *.db
+arquivos/

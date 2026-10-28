@@ -65,7 +65,7 @@ só a conclusão em linguagem natural)
 | `apps/receita_ocr_app/` | `agent.py` (o `root_agent`, único agente ADK) |
 | `tools/` | `extract_prescription.py` — a ferramenta ADK chamada pelo orquestrador |
 | `services/prescription/` | `extraction_service.py` — chamada direta ao Gemini + schemas Pydantic (`MedicationItem`, `PrescriptionExtraction`, `ExtractionResult`); `dose_schedule.py` — horários das doses a partir da posologia confirmada |
-| `api/` | `main.py` — API HTTP (FastAPI) consumida pelo front |
+| `api/` | `main.py` — API HTTP (FastAPI) consumida pelo front; `documentos.py` — documentos e dependentes; `deps.py` — usuário atual e leitura de upload |
 | `prompts/` | `orchestrator_prompt.py` (como o agente conversa com o usuário) e `extract_prescription_prompt.py` (instrução da chamada de extração — não fala com o usuário) |
 | `security/` | `review_guard.py` — HITL como segurança: detecta prompt injection e força revisão manual, sem confiar no self-report de confiança do modelo |
 | `callbacks/` | `review_guard_callback.py` — captura a imagem anexada (via Artifact) e propaga o sinal de revisão manual pro state da sessão |
@@ -145,6 +145,12 @@ Contrato completo em `specs/prescription-api.md`:
 - `POST /api/prescriptions` / `GET /api/prescriptions` — salva e lista as receitas confirmadas
 - `GET /api/medications` — medicamentos salvos com `horarios` calculados da posologia
 - `GET /api/reminders` — um lembrete por horário de dose
+- `/api/documentos` e `/api/dependentes` — repositório documental por usuário/dependente;
+  `GET /api/assistente/contexto` — só o que o usuário compartilhou com o assistente
+  (`specs/repositorio-documentos.md`, contrato em `docs/contrato-assistente-ia.md` na raiz)
+
+Toda rota exige o header `X-Usuario-Id` (só em dev, até o login do outro grupo existir).
+Os arquivos enviados ficam em `arquivos/`, ao lado do `safepass.db` (fora do git).
 
 Usa o mesmo `.env`:
 
