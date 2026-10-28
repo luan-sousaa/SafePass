@@ -10,8 +10,9 @@ export type Medicamento = {
 };
 
 export type Extracao = {
-  source: 'gemini' | 'tesseract_fallback';
-  needs_manual_review: boolean;
+  documento_ocr_id: number; // mandar de volta ao salvar (spec documento-ocr)
+  origem: 'gemini' | 'tesseract';
+  precisa_revisar: boolean;
   observacoes: string | null;
   medico: string | null;
   data_receita: string | null; // AAAA-MM-DD
@@ -19,6 +20,7 @@ export type Extracao = {
 };
 
 export type ReceitaIn = {
+  documento_ocr_id: number | null; // null = preenchimento manual
   medico: string | null;
   data_receita: string | null;
   medicamentos: Omit<Medicamento, 'precisa_revisar'>[];

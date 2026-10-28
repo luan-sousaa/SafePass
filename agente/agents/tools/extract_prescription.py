@@ -15,8 +15,8 @@ async def extract_prescription(tool_context: ToolContext) -> dict[str, Any]:
 
     Returns:
         dict com status, os medicamentos extraídos, confiança geral, observações, sinal de
-        revisão manual (needs_manual_review, RF05), os campos de baixa confiança e a origem
-        da leitura (source: "gemini" ou "tesseract_fallback", quando a Gemini API falhou e o
+        revisão manual (precisa_revisar, RF05), os campos de baixa confiança e a origem
+        da leitura (origem: "gemini" ou "tesseract", quando a Gemini API falhou e o
         OCR offline foi usado).
     """
     artifact_ref = tool_context.state.get("prescription_artifact")
@@ -43,7 +43,7 @@ async def extract_prescription(tool_context: ToolContext) -> dict[str, Any]:
     return {
         "status": "success",
         **result.data.model_dump(),
-        "needs_manual_review": result.needs_manual_review,
-        "low_confidence_fields": result.low_confidence_fields,
-        "source": result.source,
+        "precisa_revisar": result.precisa_revisar,
+        "campos_revisar": result.campos_revisar,
+        "origem": result.origem,
     }

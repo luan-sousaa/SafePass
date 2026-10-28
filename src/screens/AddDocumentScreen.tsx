@@ -25,6 +25,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
   const [error, setError] = useState('');
   const [needsReview, setNeedsReview] = useState(false);
   const [rawText, setRawText] = useState<string | null>(null);
+  const [documentoOcrId, setDocumentoOcrId] = useState<number | null>(null);
   const [items, setItems] = useState<Medicamento[]>([emptyItem]);
   const [date, setDate] = useState('');
   const [medico, setMedico] = useState('');
@@ -46,8 +47,9 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
 
     try {
       const result = await extractPrescription(file);
+      setDocumentoOcrId(result.documento_ocr_id);
 
-      if (result.source === 'tesseract_fallback') {
+      if (result.origem === 'tesseract') {
         setRawText(result.observacoes);
         setItems([emptyItem]);
         setStep('manual');
@@ -57,7 +59,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
         setItems(result.medicamentos);
         setMedico(result.medico ?? '');
         setDate(result.data_receita ?? '');
-        setNeedsReview(result.needs_manual_review);
+        setNeedsReview(result.precisa_revisar);
         setStep('review');
       }
     } catch (err) {
@@ -73,6 +75,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
   const restart = () => {
     setPreview(null);
     setRawText(null);
+    setDocumentoOcrId(null);
     setNeedsReview(false);
     setItems([emptyItem]);
     setMedico('');
@@ -86,6 +89,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
     setSaveError('');
     try {
       await savePrescription({
+        documento_ocr_id: documentoOcrId,
         medico: medico.trim() || null,
         data_receita: date || null,
         medicamentos: items.map(({ precisa_revisar: _, ...item }) => item),

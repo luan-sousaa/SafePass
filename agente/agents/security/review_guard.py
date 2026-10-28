@@ -24,11 +24,11 @@ def apply_hitl_guard(extraction):
     """
     Aplica a política de HITL como segurança sobre o resultado bruto do modelo:
     não confia no self-report de confiança — zera a confiança de item suspeito e
-    força needs_manual_review sempre que houver suspeita ou confiança abaixo do limiar.
+    força precisa_revisar sempre que houver suspeita ou confiança abaixo do limiar.
 
-    Retorna (needs_manual_review: bool, low_confidence_fields: list[str]).
+    Retorna (precisa_revisar: bool, campos_revisar: list[str]).
     """
-    low_confidence_fields: list[str] = []
+    campos_revisar: list[str] = []
     forced_review = False
 
     for index, item in enumerate(extraction.medicamentos):
@@ -37,19 +37,19 @@ def apply_hitl_guard(extraction):
         )
 
         if contains_prompt_injection(campos):
-            item.confidence = 0.0
+            item.confianca = 0.0
             forced_review = True
 
         label = item.medicamento or f"item_{index}"
 
-        if item.confidence < CONFIDENCE_THRESHOLD:
-            low_confidence_fields.append(label)
+        if item.confianca < CONFIDENCE_THRESHOLD:
+            campos_revisar.append(label)
 
-    needs_manual_review = (
+    precisa_revisar = (
         forced_review
-        or extraction.confidence_geral < CONFIDENCE_THRESHOLD
-        or bool(low_confidence_fields)
+        or extraction.confianca_geral < CONFIDENCE_THRESHOLD
+        or bool(campos_revisar)
         or not extraction.medicamentos
     )
 
-    return needs_manual_review, low_confidence_fields
+    return precisa_revisar, campos_revisar

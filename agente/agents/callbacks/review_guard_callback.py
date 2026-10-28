@@ -42,7 +42,7 @@ def review_guard_after_tool_callback(
     if tool.name != "extract_prescription":
         return None
 
-    tool_context.state["needs_manual_review"] = tool_response.get("needs_manual_review", True)
-    tool_context.state["low_confidence_fields"] = tool_response.get("low_confidence_fields", [])
+    tool_context.state["precisa_revisar"] = tool_response.get("precisa_revisar", True)
+    tool_context.state["campos_revisar"] = tool_response.get("campos_revisar", [])
 
     return None

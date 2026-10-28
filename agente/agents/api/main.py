@@ -26,8 +26,9 @@ class MedicamentoOut(BaseModel):
 
 
 class ExtracaoOut(BaseModel):
-    source: str
-    needs_manual_review: bool
+    documento_ocr_id: int
+    origem: str
+    precisa_revisar: bool
     observacoes: Optional[str]
     medico: Optional[str]
     data_receita: Optional[str]
@@ -42,6 +43,7 @@ class MedicamentoIn(BaseModel):
 
 
 class ReceitaIn(BaseModel):
+    documento_ocr_id: Optional[int] = None  # da extração; sem ele, é preenchimento manual
     medico: Optional[str] = None
     data_receita: Optional[str] = None
     medicamentos: list[MedicamentoIn] = Field(min_length=1)
@@ -87,17 +89,26 @@ def extract(file: UploadFile) -> ExtracaoOut:
     if mime_type is None:
         raise HTTPException(415, "Envie uma foto em JPG ou PNG.")
 
+    documento_ocr_id = prescription_store.iniciar_documento()
     result = extract_prescription(image_bytes, mime_type=mime_type)
+    prescription_store.concluir_extracao(
+        documento_ocr_id,
+        origem=result.origem,
+        extraido=result.data.model_dump(),
+        confianca=result.data.confianca_geral,
+        campos_revisar=result.campos_revisar,
+    )
 
     # O número de confiança é interno (spec prescription-extraction, FR-5): só sai o booleano.
     return ExtracaoOut(
-        source=result.source,
-        needs_manual_review=result.needs_manual_review,
+        documento_ocr_id=documento_ocr_id,
+        origem=result.origem,
+        precisa_revisar=result.precisa_revisar,
         observacoes=result.data.observacoes,
         medico=result.data.medico,
         data_receita=result.data.data_receita,
         medicamentos=[
-            {**item.model_dump(exclude={"confidence"}), "precisa_revisar": item.confidence < CONFIDENCE_THRESHOLD}
+            {**item.model_dump(exclude={"confianca"}), "precisa_revisar": item.confianca < CONFIDENCE_THRESHOLD}
             for item in result.data.medicamentos
         ],
     )
@@ -105,7 +116,10 @@ def extract(file: UploadFile) -> ExtracaoOut:
 
 @app.post("/api/prescriptions", status_code=201, response_model=ReceitaOut)
 def save(receita: ReceitaIn) -> dict:
-    return prescription_store.salvar(receita.model_dump())
+    try:
+        return prescription_store.salvar(receita.model_dump())
+    except prescription_store.DocumentoIndisponivel:
+        raise HTTPException(409, "Esta leitura não está mais aguardando revisão. Envie a foto de novo.")
 
 
 @app.get("/api/prescriptions", response_model=list[ReceitaOut])

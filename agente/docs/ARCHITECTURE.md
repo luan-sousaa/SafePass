@@ -43,7 +43,7 @@ graph TB
     Service -->|"3a. tenta"| Gemini
     Service -.->|"3b. se falhar: fallback"| Tesseract
     Service --> Guard
-    Guard -->|"needs_manual_review,<br/>low_confidence_fields"| Tool
+    Guard -->|"precisa_revisar,<br/>campos_revisar"| Tool
     Tool --> Orchestrator
     Orchestrator -->|"4. resposta em linguagem natural<br/>(nunca expõe o número de confiança)"| User
 ```
@@ -69,11 +69,11 @@ flowchart TD
     Parse -->|não| Fallback
     Parse -->|sim| Guard["review_guard.apply_hitl_guard"]
     Guard --> Injection{"Texto suspeito<br/>(prompt injection)?"}
-    Injection -->|sim| ForceReview["Zera confiança do item<br/>needs_manual_review = true"]
+    Injection -->|sim| ForceReview["Zera confiança do item<br/>precisa_revisar = true"]
     Injection -->|não| CheckConf{"confiança < limiar<br/>ou lista vazia?"}
     CheckConf -->|sim| ForceReview
-    CheckConf -->|não| Approved["needs_manual_review = false<br/>(aprovado automaticamente)"]
-    Fallback --> AlwaysReview["needs_manual_review = true<br/>(sempre, incondicional)"]
+    CheckConf -->|não| Approved["precisa_revisar = false<br/>(aprovado automaticamente)"]
+    Fallback --> AlwaysReview["precisa_revisar = true<br/>(sempre, incondicional)"]
     ForceReview --> Respond(["Orquestrador responde ao usuário"])
     Approved --> Respond
     AlwaysReview --> Respond
