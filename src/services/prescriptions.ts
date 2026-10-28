@@ -64,7 +64,9 @@ export async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(typeof detail === 'string' ? detail : 'O serviço está indisponível no momento.');
   }
 
-  return res.status === 204 ? (undefined as T) : res.json();
+  if (res.status === 204) return undefined as T;
+  // Arquivo (download de documento) volta como Blob; o resto da API é JSON.
+  return res.headers.get('Content-Type')?.includes('application/json') ? res.json() : (res.blob() as Promise<T>);
 }
 
 export function extractPrescription(file: File): Promise<Extracao> {
@@ -81,12 +83,15 @@ export function savePrescription(receita: ReceitaIn): Promise<Receita> {
   });
 }
 
-/** GET de uma lista da API. Lista vazia enquanto carrega ou se a API estiver fora. */
-function useList<T>(path: string): T[] {
+/**
+ * GET de uma lista da API. Lista vazia enquanto carrega ou se a API estiver fora.
+ * Mudar `versao` busca de novo (ex.: depois de editar ou apagar um item).
+ */
+export function useList<T>(path: string, versao = 0): T[] {
   const [items, setItems] = useState<T[]>([]);
   useEffect(() => {
     request<T[]>(path).then(setItems, () => {});
-  }, [path]);
+  }, [path, versao]);
   return items;
 }
 
