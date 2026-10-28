@@ -99,6 +99,21 @@ Permite acompanhar e controlar lembretes relacionados à saúde, incluindo:
 Os lembretes de medicamento são gerados automaticamente, um por horário de dose, a partir
 das receitas salvas. Eles podem ser ativados ou desativados conforme a necessidade do usuário.
 
+**Alertas (versão atual, só com o app aberto).** O front confere `GET /api/reminders` a cada
+30 s e avisa no horário de cada lembrete ligado:
+
+- com permissão, pela notificação nativa do navegador (Notification API), pedida por um botão
+  na tela de Lembretes, nunca no carregamento;
+- sem permissão ou sem suporte, por um aviso dentro do app.
+
+A lista é buscada de novo a cada verificação, então uma receita nova entra sozinha, e a virada
+do dia recomeça os horários. O liga/desliga de cada lembrete fica no navegador
+(`localStorage`), porque a API ainda não guarda essa preferência.
+
+Com o app fechado não há aviso: o timer vive na aba. O próximo passo, previsto na stack, é um
+service worker com push (FCM) disparado pelo backend, que manda a notificação mesmo com o
+SAFEpass fechado.
+
 ### Dependentes
 
 O módulo de dependentes possibilita organizar informações de saúde de outras pessoas vinculadas à conta.

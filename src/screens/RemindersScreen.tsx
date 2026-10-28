@@ -1,5 +1,6 @@
-import { useState } from 'react';
 import Icon from '../components/Icon';
+import { AtivarNotificacoes } from '../components/Alertas';
+import { chaveLembrete, useLembretesLigados } from '../services/alertas';
 import { useLembretes } from '../services/prescriptions';
 
 const reminders = [
@@ -12,9 +13,8 @@ const reminders = [
 ];
 
 export default function RemindersScreen() {
-  // Só o liga/desliga fica em estado; a lista sai da API a cada render (antes, o efeito
-  // concatenava a cada resposta e o GET duplo do StrictMode duplicava os lembretes).
-  const [toggled, setToggled] = useState<Record<string, boolean>>({});
+  // A lista sai da API a cada render; o liga/desliga é o mesmo que o agendador dos avisos lê.
+  const [ligados, alternar] = useLembretesLigados();
   const salvos = useLembretes().map(l => ({
     time: l.horario,
     label: `${l.medicamento} ${l.dose}`.trim(),
@@ -24,8 +24,8 @@ export default function RemindersScreen() {
     active: true,
   }));
   const items = [...salvos, ...reminders].map(r => {
-    const key = `${r.label} ${r.time} ${r.days}`;
-    return { ...r, key, active: toggled[key] ?? r.active };
+    const key = chaveLembrete(r.label, r.time, r.days);
+    return { ...r, key, active: ligados[key] ?? r.active };
   });
 
   return (
@@ -39,6 +39,8 @@ export default function RemindersScreen() {
           + Novo lembrete
         </button>
       </div>
+
+      <AtivarNotificacoes />
 
       <div className="space-y-3">
         {items.map((r, i) => (
@@ -67,7 +69,7 @@ export default function RemindersScreen() {
               <p className="text-base font-semibold" style={{ color: 'var(--brand-dark)' }}>{r.time}</p>
             </div>
             <button
-              onClick={() => setToggled(prev => ({ ...prev, [r.key]: !r.active }))}
+              onClick={() => alternar(r.key, !r.active)}
               className="w-12 h-6 rounded-full relative transition-all shrink-0"
               style={{ background: r.active ? 'var(--primary)' : 'var(--border)' }}
             >
