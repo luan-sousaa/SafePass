@@ -53,6 +53,9 @@ conversacional, porque a tela de revisão precisa de JSON, não de texto.
 - **FR-13** (2026-10-28): A extração MUST gravar a leitura em `documento_ocr` e devolver
   `documento_ocr_id`; o `POST /api/prescriptions` MAY recebê-lo para confirmar aquela
   leitura. Regras, status e origem na spec `documento-ocr`.
+- **FR-14** (2026-10-28): Toda rota MUST exigir o usuário (`X-Usuario-Id` em dev, 401 sem
+  ele) e receitas, medicamentos e lembretes MUST ser só do usuário atual. Detalhes na
+  spec `repositorio-documentos`, FR-1/FR-2.
 
 ## Interface / contrato
 
@@ -136,7 +139,6 @@ Rodar (de dentro de `agents/`): `uvicorn api.main:app --reload --port 8000`
 - **PDF**: o fallback Tesseract não lê PDF; entra numa spec futura se o squad quiser.
 - **Banco definitivo** (PostgreSQL, schema normalizado, migrações): frente de banco do
   squad — ver FR-9. Hoje os medicamentos ficam numa coluna JSON.
-- **Usuário dono da receita**: entra junto com a autenticação.
 - **Chat via orquestrador (`root_agent`)**: o front ainda não precisa; quando precisar,
   avaliar `adk api_server`.
 - **CORS e autenticação**: em dev o front usa proxy do Vite (mesma origem); auth entra

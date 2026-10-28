@@ -37,10 +37,19 @@ export type MedicamentoSalvo = Omit<Medicamento, 'precisa_revisar'> & {
 
 export type Lembrete = { medicamento: string; dose: string; periodo: string; horario: string };
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+// ponytail: usuário fixo só para dev. Quando o login do outro grupo existir, aqui vira
+// `Authorization: Bearer <token>` (spec repositorio-documentos, FR-1).
+const USUARIO_DEV = 'dev';
+
+/** Toda chamada à API passa por aqui: identifica o usuário, aplica o timeout e traduz os erros. */
+export async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(path, { ...init, signal: AbortSignal.timeout(60_000) });
+    res = await fetch(path, {
+      ...init,
+      headers: { ...(init?.headers as Record<string, string>), 'X-Usuario-Id': USUARIO_DEV },
+      signal: AbortSignal.timeout(60_000),
+    });
   } catch (err) {
     throw new Error(
       err instanceof DOMException && err.name === 'TimeoutError'
@@ -55,7 +64,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
     throw new Error(typeof detail === 'string' ? detail : 'O serviço está indisponível no momento.');
   }
 
-  return res.json();
+  return res.status === 204 ? (undefined as T) : res.json();
 }
 
 export function extractPrescription(file: File): Promise<Extracao> {

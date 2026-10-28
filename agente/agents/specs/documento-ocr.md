@@ -100,6 +100,8 @@ POST /api/prescriptions
 
 - **PostgreSQL, migrações e índices**: frente de Dados. Aqui é SQLite com JSON em
   coluna, como as receitas já eram (spec `prescription-api`, FR-9).
-- **Usuário e dependente donos do registro**: dependem da autenticação (grupo LOGIN).
+- **Usuário dono do registro**: `usuario_id` desde 2026-10-28 (spec `repositorio-documentos`);
+  o dependente fica no `documento`.
 - **Reprocessar ou listar a fila** (`processando`/`revisao`): nenhuma tela precisa ainda.
-- **Guardar a foto**: o registro não tem a imagem; entra com o armazenamento de arquivos.
+- ~~Guardar a foto~~: feito em 2026-10-28 (spec `repositorio-documentos`, FR-8): o
+  registro guarda `arquivo`, `mime_type` e `tamanho`, e a confirmação cria o `documento`.
