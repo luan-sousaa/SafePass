@@ -173,8 +173,9 @@ A interface do SAFEpass segue uma proposta visual profissional, limpa e objetiva
 
 O projeto utiliza:
 
-- **Days One** — títulos e elementos de destaque;
-- **Yanone Kaffeesatz** — textos e elementos da interface.
+- **Nunito Sans** — textos e elementos da interface;
+- **Yanone Kaffeesatz** — títulos;
+- **Days One** — logo.
 
 O layout utiliza componentes padronizados, ícones lineares, bordas discretas e hierarquia visual consistente.
 
@@ -192,13 +193,9 @@ Em dispositivos móveis, a navegação é adaptada para um menu compacto, manten
 
 ## Tecnologias utilizadas
 
-O projeto utiliza tecnologias modernas para desenvolvimento de interfaces web:
-
-- React
-- TypeScript
-- Vite
-- Node.js / npm
-- CSS e componentes reutilizáveis
+- **Front-end:** React 19, TypeScript, Vite e Tailwind CSS (raiz do repositório)
+- **API e IA:** Python, FastAPI, Gemini API (OCR de receitas) com fallback Tesseract (`agente/agents/`)
+- **Banco:** SQLite local por enquanto (migração para PostgreSQL prevista)
 
 ---
 
@@ -229,28 +226,53 @@ SAFEpass
 
 ## Como executar o projeto
 
-### 1. Acesse a pasta do projeto
+São dois processos, cada um em um terminal: a **API** (Python, porta 8000) e o **front**
+(Vite, porta 8443). O front fala com a API por `/api`, com proxy do Vite para a porta 8000.
+
+### Pré-requisitos
+
+| Ferramenta | Versão | Para quê |
+|---|---|---|
+| Git | qualquer | clonar |
+| Node.js | 20.19+ ou 22.12+ (exigência do Vite 8) | front |
+| Python | 3.11+ | API |
+| Tesseract com idioma português | opcional | fallback do OCR quando o Gemini falha ou não há chave |
+| Chave da Gemini API | opcional | leitura automática de receitas. Sem ela a API sobe normalmente e o OCR usa só o Tesseract |
+
+### 1. Clone o repositório
 
 ```bash
-cd SafePass-main
+git clone https://github.com/luan-sousaa/SafePass.git
+cd SafePass
 ```
 
-### 2. Instale as dependências
+### 2. Suba a API (terminal 1)
+
+macOS / Linux:
 
 ```bash
-npm install
-```
-
-### 3. Suba a API (OCR, receitas, medicamentos e lembretes)
-
-De dentro de `agente/agents/`, com um `.env` contendo `GOOGLE_API_KEY`:
-
-```bash
-python3 -m venv .venv && .venv/bin/pip install -r requirements-dev.txt
+cd agente/agents
+python3 -m venv .venv
+.venv/bin/pip install -r requirements-dev.txt
+cp ../.env.example .env          # opcional: preencha GOOGLE_API_KEY
 .venv/bin/uvicorn api.main:app --reload --port 8000
 ```
 
-O front acessa a API por `/api` (proxy do Vite para a porta 8000).
+Windows (PowerShell):
+
+```powershell
+cd agente\agents
+python -m venv .venv
+.venv\Scripts\pip install -r requirements-dev.txt
+copy ..\.env.example .env       # opcional: preencha GOOGLE_API_KEY
+.venv\Scripts\uvicorn api.main:app --reload --port 8000
+```
+
+Pronto quando aparecer `Uvicorn running on http://127.0.0.1:8000`. A documentação
+interativa das rotas fica em http://localhost:8000/docs.
+
+O banco (`safepass.db`) e os arquivos enviados (`arquivos/`) são criados sozinhos em
+`agente/agents/` na primeira chamada. Para recomeçar do zero, apague os dois.
 
 | Rota | O que faz |
 |---|---|
@@ -264,28 +286,32 @@ O front acessa a API por `/api` (proxy do Vite para a porta 8000).
 | `/api/documentos`, `/api/dependentes` | Repositório documental por usuário e dependente |
 | `GET /api/assistente/contexto` | Documentos compartilhados com o assistente IA |
 
-Toda rota exige o header `X-Usuario-Id` (só em dev; o front manda um id fixo). O contrato
-para o squad do Chat IA está em [`docs/contrato-assistente-ia.md`](docs/contrato-assistente-ia.md).
+Toda rota exige o header `X-Usuario-Id` (só em dev; o front manda `dev`). Sem ele, 401.
 
-Contrato completo em `agente/agents/specs/prescription-api.md`. Testes:
-`cd agente/agents && .venv/bin/pytest`.
+**Integração com o Assistente IA:** leia [`docs/contrato-assistente-ia.md`](docs/contrato-assistente-ia.md)
+(autenticação, consentimento, resposta real e dados de teste).
 
-### 4. Inicie o ambiente de desenvolvimento
+Testes da API: `.venv/bin/pytest` (Windows: `.venv\Scripts\pytest`), de dentro de `agente/agents/`.
+
+### 3. Suba o front (terminal 2)
+
+Na raiz do repositório:
 
 ```bash
+npm install
 npm run dev
 ```
 
-Após iniciar, o Vite exibirá no terminal os endereços disponíveis para acessar a aplicação.
+Abra http://localhost:8443. Se a API não estiver rodando, as telas aparecem vazias.
 
-Exemplo:
+### Problemas comuns
 
-```text
-Local:   http://localhost:8443/
-Network: http://SEU-IP:8443/
-```
-
-Abra o endereço **Local** no navegador para utilizar a aplicação no computador.
+| Sintoma | Causa |
+|---|---|
+| Telas vazias ou "Não foi possível conectar ao serviço" | API não está rodando na porta 8000 |
+| `401 Usuário não identificado` chamando a API direto | Falta o header `X-Usuario-Id` |
+| Leitura da receita sempre pede preenchimento manual | Sem `GOOGLE_API_KEY` ou Gemini indisponível; o Tesseract só devolve o texto bruto |
+| Erro do Vite sobre versão do Node | Node abaixo de 20.19 |
 
 ---
 
@@ -344,10 +370,13 @@ Em uma implantação real, mecanismos adicionais de segurança devem ser impleme
 
 **Em desenvolvimento.**
 
-Já funcionam com dados reais: leitura de receitas por OCR (Gemini, com fallback
-Tesseract), revisão e salvamento, e as telas de Medicamentos, Histórico e Lembretes a
-partir das receitas salvas. Exames, consultas, vacinas, dependentes, perfil e o Assistente
-IA ainda usam dados de exemplo.
+Já funcionam com dados reais da API: leitura de receitas por OCR (Gemini, com fallback
+Tesseract) com revisão humana, documentos (receita, exame, consulta, vacina, atestado) por
+usuário e dependente, dependentes, medicamentos com horários e vigência, lembretes com
+aviso no navegador, vacinas com próxima dose e o contexto para o Assistente IA.
+
+Ainda usam dados de exemplo ou dependem de outros grupos: parte da linha do tempo do Histórico, login (hoje um usuário fixo de
+dev), Perfil e o chat do Assistente IA.
 
 O acompanhamento da devolutiva da entrega parcial está em
 [`docs/devolutiva-entrega-parcial.md`](docs/devolutiva-entrega-parcial.md).
