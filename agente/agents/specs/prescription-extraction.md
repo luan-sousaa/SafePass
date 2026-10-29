@@ -150,8 +150,10 @@ def apply_hitl_guard(extraction: PrescriptionExtraction) -> tuple[bool, list[str
   baixa (comportamento do prompt, coberto por teste de integração/manual, não unitário).
 - **EC-2**: Gemini retorna resposta que não bate com o schema (`response.parsed is None`)
   → tratado como falha, cai no fallback Tesseract (mesmo caminho de EC do FR-4).
-- **EC-3**: Nenhuma `GOOGLE_API_KEY`/`GOOGLE_API_KEYS` configurada → `model_factory`
-  MUST levantar `ValueError` na importação, não falhar silenciosamente depois.
+- **EC-3** (revisto em 2026-10-29): Nenhuma `GOOGLE_API_KEY`/`GOOGLE_API_KEYS` configurada →
+  `model_factory` MUST levantar `ValueError` na primeira chave pedida (`next_api_key`), não na
+  importação. Assim a API sobe sem chave (as rotas que não usam o Gemini funcionam, ex. para o
+  squad do Assistente IA integrar) e a extração cai no fallback Tesseract.
 - **EC-4**: Usuário manda mensagem sem anexar imagem → a tool `extract_prescription`
   MUST devolver `status="error"` com mensagem amigável, sem tentar chamar o Gemini.
 - **EC-5**: Tesseract não está instalado no SO (binário ausente) → `extract_text` lança

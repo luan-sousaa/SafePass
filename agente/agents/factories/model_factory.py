@@ -20,12 +20,18 @@ def _load_api_keys() -> list[str]:
     return keys
 
 
-_api_keys = _load_api_keys()
-_key_cycle = itertools.cycle(_api_keys)
+_key_cycle = None
 
 
 def next_api_key() -> str:
-    """Revezamento round-robin entre as chaves do tier gratuito (plano estudante)."""
+    """Revezamento round-robin entre as chaves do tier gratuito (plano estudante).
+
+    As chaves são lidas na primeira chamada, não no import: a API sobe sem chave (spec
+    prescription-extraction, EC-3).
+    """
+    global _key_cycle
+    if _key_cycle is None:
+        _key_cycle = itertools.cycle(_load_api_keys())
     return next(_key_cycle)
 
 
