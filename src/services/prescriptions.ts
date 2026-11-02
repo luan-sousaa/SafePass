@@ -24,7 +24,8 @@ export type ReceitaIn = {
   dependente_id: number | null; // dono da receita; null = o próprio usuário
   medico: string | null;
   data_receita: string | null;
-  medicamentos: Omit<Medicamento, 'precisa_revisar'>[];
+  // inicio (AAAA-MM-DD) e primeira_dose (HH:MM): quando o paciente começa a tomar (spec notificacoes-medicamentos, FR-1)
+  medicamentos: (Omit<Medicamento, 'precisa_revisar'> & { inicio?: string; primeira_dose?: string })[];
 };
 
 export type Receita = ReceitaIn & { id: number; criado_em: string };
@@ -32,6 +33,8 @@ export type Receita = ReceitaIn & { id: number; criado_em: string };
 // Contrato: agente/agents/specs/medicamentos-vacinas.md
 export type MedicamentoSalvo = Omit<Medicamento, 'precisa_revisar'> & {
   id: number | null; // só no manual
+  ref: string; // "r{receita_id}-{indice}" na receita, "m{id}" no manual (spec notificacoes-medicamentos, FR-5)
+  primeira_dose: string | null;
   origem: 'receita' | 'manual';
   receita_id: number | null;
   medico: string | null;
@@ -52,6 +55,9 @@ export type Lembrete = {
   horario: string | null; // null em vacina
   data: string | null; // próxima dose da vacina
   dependente_id: number | null;
+  ref: string | null; // null em vacina
+  tomada: boolean; // dose de hoje neste horário já registrada
+  ultimo_dia: boolean; // hoje é o último dia do tratamento
 };
 
 // ponytail: usuário fixo só para dev. Quando o login do outro grupo existir, aqui vira

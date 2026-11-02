@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Icon from '../components/Icon';
 import DonoSelect, { cardStyle, inputClass } from '../components/DonoSelect';
 import { useMedicamentos, type MedicamentoSalvo } from '../services/prescriptions';
-import { createMedication, dataBR, hojeISO, updateMedication, useDependentes } from '../services/saude';
+import { createMedication, dataBR, hojeISO, setEncerrado, useDependentes } from '../services/saude';
 
 function status(med: MedicamentoSalvo) {
   if (med.ativo) return 'Ativo';
@@ -64,8 +64,9 @@ export default function MedicationsScreen() {
   const nomes = new Map(useDependentes().map(d => [d.id, d.nome]));
   const recarregar = () => setVersao(v => v + 1);
 
-  const encerrar = async (id: number) => {
-    await updateMedication(id, { encerrado_em: hojeISO() }).catch(() => {});
+  // Pausar = encerrar hoje e reabrir depois (spec notificacoes-medicamentos, FR-4).
+  const encerrar = async (med: MedicamentoSalvo, encerrado_em: string | null) => {
+    await setEncerrado(med, encerrado_em).catch(() => {});
     recarregar();
   };
 
@@ -92,9 +93,9 @@ export default function MedicationsScreen() {
 
       {meds.length > 0 && (
         <div className="rounded-lg overflow-hidden" style={cardStyle}>
-          {meds.map((med, i) => (
+          {meds.map(med => (
             <div
-              key={med.id ?? `r${med.receita_id}-${i}`}
+              key={med.ref}
               className="p-5 transition-colors border-b last:border-b-0 hover:bg-[var(--muted)]"
               style={{ borderColor: 'var(--border)', opacity: med.ativo ? 1 : 0.6 }}
             >
@@ -131,9 +132,13 @@ export default function MedicationsScreen() {
                     <span className="text-xs" style={{ color: 'var(--muted-foreground)' }}>
                       {med.origem === 'receita' ? `Da receita${med.medico ? ` de ${med.medico}` : ''}` : 'Cadastrado manualmente'}
                     </span>
-                    {med.origem === 'manual' && med.ativo && med.id !== null && (
-                      <button onClick={() => encerrar(med.id!)} className="text-xs font-semibold" style={{ color: 'var(--primary)' }}>
-                        Encerrar
+                    {(med.ativo || med.encerrado_em) && (
+                      <button
+                        onClick={() => encerrar(med, med.encerrado_em ? null : hojeISO())}
+                        className="text-xs font-semibold"
+                        style={{ color: 'var(--primary)' }}
+                      >
+                        {med.encerrado_em ? 'Reabrir' : 'Encerrar'}
                       </button>
                     )}
                   </div>

@@ -35,6 +35,16 @@ export const createMedication = (m: MedicamentoManualIn) => request<MedicamentoS
 export const updateMedication = (id: number, campos: Partial<MedicamentoManualIn> & { encerrado_em?: string | null }) =>
   request<MedicamentoSalvo>(`/api/medications/${id}`, json('PATCH', campos));
 
+/** Encerra (data) ou reabre (null) um medicamento: o manual pelo id, o da receita pela posição na receita. */
+export function setEncerrado(med: MedicamentoSalvo, encerrado_em: string | null) {
+  if (med.origem === 'manual') return updateMedication(med.id!, { encerrado_em });
+  const indice = med.ref.split('-')[1]; // ref "r{receita_id}-{indice}"
+  return request<unknown>(`/api/prescriptions/${med.receita_id}/medicamentos/${indice}`, json('PATCH', { encerrado_em }));
+}
+
+/** Marca a dose como tomada. `data` é o dia do horário avisado, não o de agora (EC-4). */
+export const registrarDose = (dose: { ref: string; data: string; horario: string }) => request<unknown>('/api/doses', json('POST', dose));
+
 export const createVaccine = (v: VacinaIn) => request<Vacina>('/api/vacinas', json('POST', v));
 export const updateVaccine = (id: number, campos: Partial<VacinaIn>) => request<Vacina>(`/api/vacinas/${id}`, json('PATCH', campos));
 

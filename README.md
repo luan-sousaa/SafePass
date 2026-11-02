@@ -102,9 +102,16 @@ das receitas salvas. Eles podem ser ativados ou desativados conforme a necessida
 **Alertas (versão atual, só com o app aberto).** O front confere `GET /api/reminders` a cada
 30 s e avisa no horário de cada lembrete ligado:
 
-- com permissão, pela notificação nativa do navegador (Notification API), pedida por um botão
-  na tela de Lembretes, nunca no carregamento;
-- sem permissão ou sem suporte, por um aviso dentro do app.
+- sempre por um aviso dentro do app, com o botão **Tomei**, que registra a dose;
+- com permissão, também pela notificação nativa do navegador (Notification API), pedida por um
+  botão na tela de Lembretes, nunca no carregamento.
+
+Sem resposta, o aviso volta uma única vez 15 minutos depois. Dose já marcada como tomada não
+avisa, e no último dia do tratamento o aviso diz "Seu tratamento termina hoje". Na confirmação
+da receita o paciente informa a data e a hora da 1ª dose (os horários contam a partir dela) e,
+se o período não tiver dias, quantos dias ou uso contínuo. Em Medicamentos, qualquer remédio,
+inclusive o da receita, pode ser encerrado e reaberto. Regras em
+`agente/agents/specs/notificacoes-medicamentos.md`.
 
 A lista é buscada de novo a cada verificação, então uma receita nova entra sozinha, e a virada
 do dia recomeça os horários. O liga/desliga de cada lembrete fica no navegador

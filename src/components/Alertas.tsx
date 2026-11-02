@@ -2,8 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import Icon from './Icon';
 import { chaveDoLembrete, useLembretesLigados } from '../services/alertas';
 import { useList, type Lembrete } from '../services/prescriptions';
+import { hojeISO, registrarDose } from '../services/saude';
 
 const INTERVALO_MS = 30_000;
+const REAVISO_MS = 15 * 60_000;
+
+type Aviso = { id: number; lembrete: Lembrete; data: string; erro?: string };
+const texto = (l: Lembrete) => `${l.medicamento} ${l.dose}`.trim();
 
 const suportaNotificacao = () => 'Notification' in window;
 const minutos = (hhmm: string) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
@@ -14,7 +19,11 @@ const minutosAgora = () => {
 
 /**
  * Avisa no horário de cada lembrete ligado: notificação do navegador se o usuário deixou,
- * senão um aviso dentro do app. Fica montado no App, em qualquer tela.
+ * e sempre um aviso dentro do app, que é onde fica o botão "Tomei". Sem resposta, avisa de novo
+ * uma única vez 15 min depois (spec notificacoes-medicamentos, FR-9). Fica montado no App.
+ *
+ * ponytail: notificação sem service worker não aceita botões, por isso o "Tomei" vive no aviso
+ * do app; com o service worker do push, ele vira uma action da própria notificação.
  *
  * ponytail: só funciona com o app aberto (o timer morre com a aba). Para avisar com o app
  * fechado, o caminho é service worker + push (FCM) disparado pelo backend, como prevê a stack.
@@ -23,7 +32,8 @@ export default function Alertas() {
   const [versao, setVersao] = useState(0);
   const lembretes = useList<Lembrete>('/api/reminders', versao);
   const [ligados] = useLembretesLigados();
-  const [avisos, setAvisos] = useState<{ id: number; lembrete: Lembrete }[]>([]);
+  const [avisos, setAvisos] = useState<Aviso[]>([]);
+  const reavisos = useRef(new Map<string, ReturnType<typeof setTimeout>>()); // por dose: ref + data + horário
   const atual = useRef({ lembretes, ligados });
   atual.current = { lembretes, ligados };
   const ultimaVerificacao = useRef(minutosAgora());
@@ -40,19 +50,43 @@ export default function Alertas() {
       for (const l of lembretes) {
         if (!l.horario) continue; // vacina: lembrete por data, sem hora para avisar
         const m = minutos(l.horario);
-        if (desde < m && m <= agora && (ligados[chaveDoLembrete(l)] ?? true)) avisar(l);
+        if (desde < m && m <= agora && !l.tomada && (ligados[chaveDoLembrete(l)] ?? true)) avisar(l, hojeISO(), true);
       }
       setVersao(v => v + 1); // busca a lista de novo: receita nova ou apagada entra no próximo ciclo
     }, INTERVALO_MS);
     return () => clearInterval(id);
   }, []);
 
-  const avisar = (l: Lembrete) => {
-    const texto = `${l.medicamento} ${l.dose}`.trim();
+  const doseId = (l: Lembrete, data: string) => `${l.ref} ${data} ${l.horario}`;
+
+  const avisar = (l: Lembrete, data: string, reavisar: boolean) => {
     if (suportaNotificacao() && Notification.permission === 'granted') {
-      new Notification('Hora do medicamento', { body: `${texto} · ${l.horario}`, tag: chaveDoLembrete(l) });
-    } else {
-      setAvisos(prev => [...prev, { id: Date.now() + Math.random(), lembrete: l }]);
+      const body = [`${texto(l)} · ${l.horario}`, l.ultimo_dia && 'Seu tratamento termina hoje'].filter(Boolean).join('\n');
+      const n = new Notification('Hora do medicamento', { body, tag: chaveDoLembrete(l) });
+      n.onclick = () => window.focus();
+    }
+    setAvisos(prev => [...prev.filter(a => doseId(a.lembrete, a.data) !== doseId(l, data)), { id: Date.now() + Math.random(), lembrete: l, data }]);
+    if (!reavisar) return;
+    reavisos.current.set(doseId(l, data), setTimeout(() => {
+      reavisos.current.delete(doseId(l, data));
+      // Lista mais recente: dose marcada em outra aba ou lembrete desligado não reavisa.
+      const agora = atual.current.lembretes.find(x => x.ref === l.ref && x.horario === l.horario);
+      if (agora && !agora.tomada && (atual.current.ligados[chaveDoLembrete(agora)] ?? true)) avisar(agora, data, false);
+    }, REAVISO_MS));
+  };
+
+  const fechar = (id: number) => setAvisos(prev => prev.filter(a => a.id !== id));
+
+  const tomei = async ({ id, lembrete, data }: Aviso) => {
+    try {
+      await registrarDose({ ref: lembrete.ref!, data, horario: lembrete.horario! });
+      clearTimeout(reavisos.current.get(doseId(lembrete, data)));
+      reavisos.current.delete(doseId(lembrete, data));
+      fechar(id);
+      setVersao(v => v + 1);
+    } catch (err) {
+      const erro = err instanceof Error ? err.message : 'Não foi possível registrar a dose.';
+      setAvisos(prev => prev.map(a => (a.id === id ? { ...a, erro } : a)));
     }
   };
 
@@ -60,9 +94,9 @@ export default function Alertas() {
 
   return (
     <div className="fixed bottom-4 right-4 z-50 w-[calc(100%-2rem)] max-w-sm space-y-3">
-      {avisos.map(({ id, lembrete }) => (
+      {avisos.map(aviso => (
         <div
-          key={id}
+          key={aviso.id}
           role="alert"
           className="flex items-start gap-3 p-4 rounded-lg animate-slide-up"
           style={{ background: 'var(--card)', border: '1px solid var(--brand)', boxShadow: 'var(--shadow-app)' }}
@@ -73,12 +107,23 @@ export default function Alertas() {
           <div className="flex-1 min-w-0">
             <p className="text-sm font-semibold" style={{ color: 'var(--brand-dark)' }}>Hora do medicamento</p>
             <p className="text-sm mt-0.5" style={{ color: 'var(--foreground)' }}>
-              {`${lembrete.medicamento} ${lembrete.dose}`.trim()} · {lembrete.horario}
+              {texto(aviso.lembrete)} · {aviso.lembrete.horario}
             </p>
+            {aviso.lembrete.ultimo_dia && (
+              <p className="text-xs font-semibold mt-1" style={{ color: 'var(--brand)' }}>Seu tratamento termina hoje</p>
+            )}
+            {aviso.erro && <p className="text-xs mt-1" style={{ color: 'var(--danger)' }}>{aviso.erro}</p>}
+            <button
+              onClick={() => tomei(aviso)}
+              className="mt-3 px-4 py-1.5 rounded-lg text-sm font-semibold text-white"
+              style={{ background: 'var(--primary)' }}
+            >
+              Tomei
+            </button>
           </div>
           <button
             aria-label="Fechar aviso"
-            onClick={() => setAvisos(prev => prev.filter(a => a.id !== id))}
+            onClick={() => fechar(aviso.id)}
             style={{ color: 'var(--muted-foreground)' }}
           >
             <Icon name="x" className="w-4 h-4" />
