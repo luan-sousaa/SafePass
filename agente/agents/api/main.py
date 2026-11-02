@@ -1,3 +1,4 @@
+from datetime import date
 from typing import Annotated, Optional
 
 from fastapi import FastAPI, HTTPException, UploadFile
@@ -6,7 +7,7 @@ from pydantic import BaseModel, Field, StringConstraints
 from api import documentos, saude
 from api.deps import IMAGENS, MAX_UPLOAD_BYTES, UsuarioAtual, ler_arquivo  # noqa: F401 (MAX_UPLOAD_BYTES: testes)
 from config.confidence_config import CONFIDENCE_THRESHOLD
-from api.saude import LembreteOut, MedicamentoSalvoOut, VacinaOut
+from api.saude import Hora, LembreteOut, MedicamentoSalvoOut, VacinaOut
 from repositories import documento_store, prescription_store, saude_store
 from services.prescription.extraction_service import extract_prescription
 
@@ -33,6 +34,8 @@ class MedicamentoIn(BaseModel):
     dose: str = ""
     posologia: str = ""
     periodo: str = ""
+    inicio: Optional[date] = None  # nulo = o dia em que a receita é salva (spec notificacoes-medicamentos, FR-1)
+    primeira_dose: Optional[Hora] = None  # nulo = 08:00
 
 
 class ReceitaIn(BaseModel):
@@ -104,8 +107,12 @@ def extract(file: UploadFile, usuario_id: UsuarioAtual) -> ExtracaoOut:
 @app.post("/api/prescriptions", status_code=201, response_model=ReceitaOut)
 def save(receita: ReceitaIn, usuario_id: UsuarioAtual) -> dict:
     documentos.exigir_dependente(usuario_id, receita.dependente_id)
+    dados = receita.model_dump(mode="json")
+    for m in dados["medicamentos"]:  # grava os padrões: a receita antiga, sem eles, segue a regra antiga (EC-3)
+        m["inicio"] = m["inicio"] or date.today().isoformat()
+        m["primeira_dose"] = m["primeira_dose"] or "08:00"
     try:
-        return prescription_store.salvar(receita.model_dump(), usuario_id)
+        return prescription_store.salvar(dados, usuario_id)
     except prescription_store.DocumentoIndisponivel:
         raise HTTPException(409, "Esta leitura não está mais aguardando revisão. Envie a foto de novo.")
 
@@ -124,4 +131,4 @@ def assistant_context(usuario_id: UsuarioAtual, dependente_id: Optional[int] = N
     medicamentos = saude.medicamentos_das_receitas([r for r in prescription_store.listar(usuario_id) if r["documento_ocr_id"] in leituras])
     vacinas = saude_store.listar_vacinas(usuario_id, dependente_id=dependente_id, compartilhadas=True)
     pendentes = saude_store.listar_vacinas(usuario_id, dependente_id=dependente_id, compartilhadas=True, pendentes=True)
-    return {"documentos": compartilhados, "medicamentos": medicamentos, "lembretes": saude.lembretes(medicamentos, pendentes), "vacinas": vacinas}
+    return {"documentos": compartilhados, "medicamentos": medicamentos, "lembretes": saude.lembretes(medicamentos, pendentes, saude_store.doses_tomadas(usuario_id, date.today().isoformat())), "vacinas": vacinas}
