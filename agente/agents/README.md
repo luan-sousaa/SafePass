@@ -148,6 +148,8 @@ Contrato completo em `specs/prescription-api.md`:
   próxima dose de vacina
 - `POST /api/medications`, `PATCH /api/medications/{id}` e `/api/vacinas` — cadastro manual
   de medicamentos e de vacinas (`specs/medicamentos-vacinas.md`)
+- `PATCH /api/prescriptions/{id}/medicamentos/{indice}` e `POST`/`DELETE /api/doses` — encerrar
+  remédio da receita e marcar dose tomada (`specs/notificacoes-medicamentos.md`)
 - `/api/documentos` e `/api/dependentes` — repositório documental por usuário/dependente;
   `GET /api/assistente/contexto` — só o que o usuário compartilhou com o assistente
   (`specs/repositorio-documentos.md`, contrato em `docs/contrato-assistente-ia.md` na raiz)

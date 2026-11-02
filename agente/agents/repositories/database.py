@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 # documento_ocr: um registro por leitura (spec documento-ocr): processando → revisao → confirmado.
 # Falha do OCR não tem status próprio: vira origem "tesseract" em revisão.
 # documento/dependente: repositório do usuário (spec repositorio-documentos).
-# medicamento (manual) e vacina: spec medicamentos-vacinas.
+# medicamento (manual) e vacina: spec medicamentos-vacinas. dose_tomada: spec notificacoes-medicamentos.
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS documento_ocr (
     id INTEGER PRIMARY KEY,
@@ -71,6 +71,11 @@ CREATE TABLE IF NOT EXISTS vacina (
     compartilhado_assistente INTEGER NOT NULL DEFAULT 0,
     criado_em TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS dose_tomada (
+    id INTEGER PRIMARY KEY, usuario_id TEXT NOT NULL,
+    ref TEXT NOT NULL, data TEXT NOT NULL, horario TEXT NOT NULL, tomada_em TEXT NOT NULL,
+    UNIQUE (usuario_id, ref, data, horario)
+);
 """
 
 # Colunas que chegaram depois da tabela: bancos antigos ganham ao abrir, sem perder dados.
@@ -81,6 +86,7 @@ _COLUNAS_NOVAS = [
     ("documento_ocr", "arquivo TEXT"),
     ("documento_ocr", "mime_type TEXT"),
     ("documento_ocr", "tamanho INTEGER"),
+    ("medicamento", "primeira_dose TEXT"),
 ]
 
 

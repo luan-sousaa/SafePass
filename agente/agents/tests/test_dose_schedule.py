@@ -43,3 +43,16 @@ def test_momento_do_dia_e_dose_diaria_unica_viram_horario_fixo_ac10(posologia, e
 )
 def test_nao_inventa_horario_ec5(posologia):
     assert horarios(posologia) == []
+
+
+@pytest.mark.parametrize(
+    "posologia, primeira_dose, esperado",
+    [
+        ("8/8h", "15:00", ["15:00", "23:00", "07:00"]),
+        ("12/12h", "21:30", ["21:30", "09:30"]),
+        ("1x ao dia", "22:00", ["22:00"]),
+        ("1 cp à noite", "15:00", ["20:00"]),  # momento fixo não muda (FR-15)
+    ],
+)
+def test_interval_starts_at_first_dose_notificacoes_fr2(posologia, primeira_dose, esperado):
+    assert horarios(posologia, primeira_dose) == esperado

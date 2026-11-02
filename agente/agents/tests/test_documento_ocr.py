@@ -2,6 +2,7 @@
 
 import json
 import sqlite3
+from datetime import date
 from unittest.mock import patch
 
 import pytest
@@ -102,7 +103,8 @@ def test_confirming_links_prescription_to_document_ac4():
     assert response.status_code == 201
     doc = _documento(documento_ocr_id)
     assert (doc["status"], doc["origem"]) == ("confirmado", "gemini")
-    assert json.loads(doc["confirmado"])["medicamentos"] == RECEITA["medicamentos"]
+    padroes = {"inicio": date.today().isoformat(), "primeira_dose": "08:00"}  # spec notificacoes-medicamentos, FR-1
+    assert json.loads(doc["confirmado"])["medicamentos"] == [{**m, **padroes} for m in RECEITA["medicamentos"]]
     assert doc["confirmado_em"]
     assert client.get("/api/prescriptions").json()[0]["documento_ocr_id"] == documento_ocr_id
 
