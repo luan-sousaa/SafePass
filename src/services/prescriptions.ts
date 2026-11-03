@@ -34,7 +34,7 @@ export type Receita = ReceitaIn & { id: number; criado_em: string };
 export type MedicamentoSalvo = Omit<Medicamento, 'precisa_revisar'> & {
   id: number | null; // só no manual
   ref: string; // "r{receita_id}-{indice}" na receita, "m{id}" no manual (spec notificacoes-medicamentos, FR-5)
-  primeira_dose: string | null;
+  primeira_dose: string; // HH:MM, 08:00 quando não informada
   origem: 'receita' | 'manual';
   receita_id: number | null;
   medico: string | null;

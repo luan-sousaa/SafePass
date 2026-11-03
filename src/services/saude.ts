@@ -10,6 +10,7 @@ export type MedicamentoManualIn = {
   posologia: string;
   inicio: string; // AAAA-MM-DD
   duracao_dias: number | null; // null = contínuo
+  primeira_dose: string; // HH:MM; os horários contam a partir dela
   dependente_id: number | null;
 };
 
