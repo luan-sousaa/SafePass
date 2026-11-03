@@ -105,14 +105,14 @@ X-Usuario-Id: maria
       "id": null, "origem": "receita", "receita_id": 1,
       "medico": "Dra. Ana Lima", "data_receita": "2026-10-27",
       "medicamento": "Amoxicilina", "dose": "250mg", "posologia": "5 ml de 8/8h", "periodo": "7 dias",
-      "horarios": ["08:00", "16:00", "00:00"],
+      "ref": "r1-0", "horarios": ["08:00", "16:00", "00:00"], "primeira_dose": "08:00",
       "dependente_id": 1, "inicio": "2026-10-27", "duracao_dias": 7, "encerrado_em": null, "ativo": true
     }
   ],
   "lembretes": [
-    {"tipo": "medicamento", "medicamento": "Amoxicilina", "dose": "250mg", "periodo": "7 dias", "horario": "08:00", "data": null, "dependente_id": 1},
-    {"tipo": "medicamento", "medicamento": "Amoxicilina", "dose": "250mg", "periodo": "7 dias", "horario": "16:00", "data": null, "dependente_id": 1},
-    {"tipo": "medicamento", "medicamento": "Amoxicilina", "dose": "250mg", "periodo": "7 dias", "horario": "00:00", "data": null, "dependente_id": 1}
+    {"tipo": "medicamento", "medicamento": "Amoxicilina", "dose": "250mg", "periodo": "7 dias", "horario": "08:00", "data": null, "dependente_id": 1, "ref": "r1-0", "tomada": false, "ultimo_dia": false},
+    {"tipo": "medicamento", "medicamento": "Amoxicilina", "dose": "250mg", "periodo": "7 dias", "horario": "16:00", "data": null, "dependente_id": 1, "ref": "r1-0", "tomada": false, "ultimo_dia": false},
+    {"tipo": "medicamento", "medicamento": "Amoxicilina", "dose": "250mg", "periodo": "7 dias", "horario": "00:00", "data": null, "dependente_id": 1, "ref": "r1-0", "tomada": false, "ultimo_dia": false}
   ],
   "vacinas": []
 }
@@ -128,10 +128,11 @@ inventar dados.
 |---|---|
 | `documentos[].tipo` | `receita`, `exame`, `consulta`, `vacina` ou `atestado` |
 | `documentos[].dados` | O que o usuário **confirmou** depois do OCR, nunca o palpite da IA. Hoje só receita tem; os outros tipos vêm `null` |
-| `medicamentos[].horarios` | Calculados da posologia confirmada, começando às 08:00. Posologia condicional ("se necessário") vem `[]` |
+| `medicamentos[].horarios` | Calculados da posologia confirmada, começando na `primeira_dose` (08:00 se o usuário não escolheu). Posologia condicional ("se necessário") vem `[]` |
 | `medicamentos[].ativo` | Já começou, não foi encerrado e o período não venceu. Só ativos geram lembrete |
 | `medicamentos[].origem` | `receita` (veio do OCR/receita) ou `manual` |
 | `lembretes[].tipo` | `medicamento` (com `horario` do dia) ou `vacina` (com `data` da próxima dose e `horario` nulo; o nome da vacina vem em `medicamento`) |
+| `lembretes[].tomada` / `ultimo_dia` | A dose de hoje naquele horário já foi registrada / hoje é o último dia do tratamento (sempre `false` em vacina) |
 | `vacinas[]` | `nome`, `dose`, `data_aplicacao`, `proxima_dose`, `dependente_id`, `documento_id` |
 
 ## Modelo

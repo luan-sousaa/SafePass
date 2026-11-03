@@ -80,3 +80,25 @@ def atualizar_vacina(usuario_id: str, vacina_id: int, campos: dict) -> Optional[
 def apagar_vacina(usuario_id: str, vacina_id: int) -> bool:
     with connect() as conn:
         return conn.execute("DELETE FROM vacina WHERE id = ? AND usuario_id = ?", (vacina_id, usuario_id)).rowcount > 0
+
+
+# Doses tomadas (spec notificacoes-medicamentos, FR-6). `ref` já foi conferido pela API.
+
+def registrar_dose(usuario_id: str, ref: str, data: str, horario: str) -> None:
+    with connect() as conn:
+        conn.execute(
+            "INSERT OR IGNORE INTO dose_tomada (usuario_id, ref, data, horario, tomada_em) VALUES (?, ?, ?, ?, ?)",
+            (usuario_id, ref, data, horario, agora()),
+        )
+
+
+def desfazer_dose(usuario_id: str, ref: str, data: str, horario: str) -> None:
+    with connect() as conn:
+        conn.execute("DELETE FROM dose_tomada WHERE usuario_id = ? AND ref = ? AND data = ? AND horario = ?", (usuario_id, ref, data, horario))
+
+
+def doses_tomadas(usuario_id: str, data: str) -> set[tuple[str, str]]:
+    """(ref, horario) das doses registradas no dia."""
+    with connect() as conn:
+        rows = conn.execute("SELECT ref, horario FROM dose_tomada WHERE usuario_id = ? AND data = ?", (usuario_id, data)).fetchall()
+    return {(row["ref"], row["horario"]) for row in rows}

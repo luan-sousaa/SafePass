@@ -35,7 +35,8 @@ def _receita(cliente, nome, data_receita, periodo):
     return cliente.post("/api/prescriptions", json={
         "medico": None,
         "data_receita": data_receita,
-        "medicamentos": [{"medicamento": nome, "dose": "500mg", "posologia": "12/12h", "periodo": periodo}],
+        # começou a tomar no dia da receita (o padrão é o dia em que foi salva: spec notificacoes-medicamentos, FR-1)
+        "medicamentos": [{"medicamento": nome, "dose": "500mg", "posologia": "12/12h", "periodo": periodo, "inicio": data_receita}],
     })
 
 

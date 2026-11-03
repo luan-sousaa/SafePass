@@ -1,5 +1,6 @@
 import json
 from datetime import datetime, timezone
+from typing import Optional
 
 from repositories.database import connect as _connect
 
@@ -72,3 +73,15 @@ def listar(usuario_id: str) -> list[dict]:
             (usuario_id,),
         ).fetchall()
     return [{**dict(row), "medicamentos": json.loads(row["medicamentos"])} for row in rows]
+
+
+def encerrar_medicamento(usuario_id: str, receita_id: int, indice: int, encerrado_em: Optional[str]) -> bool:
+    """Grava `encerrado_em` no item `indice` da receita (spec notificacoes-medicamentos, FR-4); False se não achar."""
+    with _connect() as conn:
+        row = conn.execute("SELECT medicamentos FROM receitas WHERE id = ? AND usuario_id = ?", (receita_id, usuario_id)).fetchone()
+        medicamentos = json.loads(row["medicamentos"]) if row else []
+        if not 0 <= indice < len(medicamentos):
+            return False
+        medicamentos[indice]["encerrado_em"] = encerrado_em
+        conn.execute("UPDATE receitas SET medicamentos = ? WHERE id = ?", (json.dumps(medicamentos, ensure_ascii=False), receita_id))
+    return True

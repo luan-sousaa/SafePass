@@ -84,8 +84,9 @@ A área de medicamentos permite acompanhar os tratamentos registrados, apresenta
 - período de utilização;
 - horários das doses do dia.
 
-Os horários são **calculados a partir da posologia confirmada** pelo usuário: "8/8h" gera
-doses às 08:00, 16:00 e 00:00, e "2x ao dia" às 08:00 e 20:00. Posologia condicional
+Os horários são **calculados a partir da posologia confirmada** pelo usuário, começando na
+1ª dose que ele escolhe (08:00 por padrão): "8/8h" gera doses às 08:00, 16:00 e 00:00, e
+"2x ao dia" às 08:00 e 20:00. Posologia condicional
 ("se necessário", "SOS") não gera horário: o sistema não inventa dose.
 
 ### Lembretes
@@ -281,7 +282,9 @@ O banco (`safepass.db`) e os arquivos enviados (`arquivos/`) são criados sozinh
 | `GET /api/prescriptions` | Lista as receitas salvas |
 | `GET /api/medications` | Medicamentos (da receita e manuais) com horários e se estão ativos |
 | `POST /api/medications`, `PATCH /api/medications/{id}` | Cadastra, edita e encerra medicamento manual |
-| `GET /api/reminders` | Doses do dia dos medicamentos ativos e próximas doses de vacinas |
+| `PATCH /api/prescriptions/{id}/medicamentos/{indice}` | Encerra ou reabre um medicamento da receita |
+| `GET /api/reminders` | Doses do dia dos medicamentos ativos (com `tomada`) e próximas doses de vacinas |
+| `POST /api/doses`, `DELETE /api/doses` | Marca e desmarca a dose como tomada |
 | `/api/vacinas` | Registro e consulta de vacinas por dono |
 | `/api/documentos`, `/api/dependentes` | Repositório documental por usuário e dependente |
 | `GET /api/assistente/contexto` | Documentos compartilhados com o assistente IA |

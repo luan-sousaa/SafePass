@@ -137,7 +137,8 @@ def test_saves_and_lists_newest_first_ac7(db):
     assert primeira.status_code == segunda.status_code == 201
     lista = client.get("/api/prescriptions").json()
     assert [r["id"] for r in lista] == [segunda.json()["id"], primeira.json()["id"]]
-    assert lista[1]["medicamentos"] == RECEITA["medicamentos"]
+    padroes = {"inicio": date.today().isoformat(), "primeira_dose": "08:00"}  # spec notificacoes-medicamentos, FR-1
+    assert lista[1]["medicamentos"] == [{**RECEITA["medicamentos"][0], **padroes}]
     assert lista[1]["criado_em"]
 
 
