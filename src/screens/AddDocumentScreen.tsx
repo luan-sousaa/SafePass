@@ -8,6 +8,20 @@ type Step = 'choose' | 'analyzing' | 'review' | 'error' | 'manual' | 'other';
 
 const emptyItem: Medicamento = { medicamento: '', dose: '', posologia: '', periodo: '', precisa_revisar: false };
 
+// Na confirmação: quando começa a tomar (spec notificacoes-medicamentos, FR-8) e, se o período
+// não diz quantos dias, a duração ou uso contínuo.
+type Item = Medicamento & { inicio: string; primeira_dose: string; dias: string; continuo: boolean };
+
+/** Padrão da 1ª dose: a próxima hora cheia (23:30 → amanhã às 00:00). */
+function novoItem(m: Medicamento = emptyItem): Item {
+  const d = new Date();
+  d.setHours(d.getHours() + 1, 0, 0, 0);
+  return { ...m, inicio: d.toLocaleDateString('sv-SE'), primeira_dose: d.toTimeString().slice(0, 5), dias: '', continuo: false };
+}
+
+// Mesma regra do backend (vigencia.duracao_dias): "7 dias", "2 semanas".
+const temDias = (periodo: string) => /\d+\s*(dia|semana)/i.test(periodo);
+
 const itemFields: { key: 'medicamento' | 'dose' | 'posologia' | 'periodo'; label: string; placeholder: string }[] = [
   { key: 'medicamento', label: 'Medicamento', placeholder: 'Ex.: Amoxicilina' },
   { key: 'dose', label: 'Dosagem', placeholder: 'Ex.: 500 mg' },
@@ -27,7 +41,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
   const [needsReview, setNeedsReview] = useState(false);
   const [rawText, setRawText] = useState<string | null>(null);
   const [documentoOcrId, setDocumentoOcrId] = useState<number | null>(null);
-  const [items, setItems] = useState<Medicamento[]>([emptyItem]);
+  const [items, setItems] = useState<Item[]>(() => [novoItem()]);
   const [date, setDate] = useState('');
   const [medico, setMedico] = useState('');
   const [dono, setDono] = useState('');
@@ -54,12 +68,12 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
 
       if (result.origem === 'tesseract') {
         setRawText(result.observacoes);
-        setItems([emptyItem]);
+        setItems([novoItem()]);
         setStep('manual');
       } else if (result.medicamentos.length === 0) {
         fail('A foto não ficou legível ou não parece uma receita médica. Tente outra foto, mais nítida e bem iluminada.');
       } else {
-        setItems(result.medicamentos);
+        setItems(result.medicamentos.map(novoItem));
         setMedico(result.medico ?? '');
         setDate(result.data_receita ?? '');
         setNeedsReview(result.precisa_revisar);
@@ -80,7 +94,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
     setRawText(null);
     setDocumentoOcrId(null);
     setNeedsReview(false);
-    setItems([emptyItem]);
+    setItems([novoItem()]);
     setMedico('');
     setDate('');
     setDono('');
@@ -97,7 +111,10 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
         medico: medico.trim() || null,
         data_receita: date || null,
         dependente_id: dono ? Number(dono) : null,
-        medicamentos: items.map(({ precisa_revisar: _, ...item }) => item),
+        medicamentos: items.map(({ precisa_revisar: _, dias, continuo, ...item }) => ({
+          ...item,
+          periodo: temDias(item.periodo) ? item.periodo : continuo ? 'uso contínuo' : `${dias} dias`,
+        })),
       });
       navigate('medications');
     } catch (err) {
@@ -106,7 +123,7 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
     }
   };
 
-  const updateItem = (index: number, key: keyof Medicamento, value: string) =>
+  const updateItem = <K extends keyof Item>(index: number, key: K, value: Item[K]) =>
     setItems(prev => prev.map((item, i) => (i === index ? { ...item, [key]: value } : item)));
 
   if (step === 'choose') {
@@ -288,12 +305,43 @@ export default function AddDocumentScreen({ navigate }: { navigate: (s: Screen) 
                   />
                 </Field>
               ))}
+
+              {!temDias(item.periodo) && (
+                <div className="grid gap-4 sm:grid-cols-2 items-end">
+                  <Field label="Por quantos dias?">
+                    <input
+                      type="number"
+                      min={1}
+                      required={!item.continuo}
+                      disabled={item.continuo}
+                      value={item.continuo ? '' : item.dias}
+                      placeholder="Ex.: 7"
+                      onChange={e => updateItem(index, 'dias', e.target.value)}
+                      className={`${inputClass} disabled:opacity-50`}
+                      style={{ color: 'var(--foreground)' }}
+                    />
+                  </Field>
+                  <label className="flex items-center gap-2 py-3 text-sm" style={{ color: 'var(--foreground)' }}>
+                    <input type="checkbox" checked={item.continuo} onChange={e => updateItem(index, 'continuo', e.target.checked)} />
+                    Uso contínuo (avisa até você encerrar)
+                  </label>
+                </div>
+              )}
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Data da 1ª dose">
+                  <input type="date" required value={item.inicio} onChange={e => updateItem(index, 'inicio', e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }} />
+                </Field>
+                <Field label="Hora da 1ª dose">
+                  <input type="time" required value={item.primeira_dose} onChange={e => updateItem(index, 'primeira_dose', e.target.value)} className={inputClass} style={{ color: 'var(--foreground)' }} />
+                </Field>
+              </div>
             </div>
           ))}
 
           <button
             type="button"
-            onClick={() => setItems(prev => [...prev, emptyItem])}
+            onClick={() => setItems(prev => [...prev, novoItem()])}
             className="w-full flex items-center justify-center gap-2 py-3 rounded-xl text-sm font-semibold border border-dashed border-[var(--border)] hover:border-[var(--primary)]"
             style={{ color: 'var(--brand)' }}
           >
