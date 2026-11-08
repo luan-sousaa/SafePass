@@ -26,9 +26,9 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen overflow-hidden p-0 lg:p-4" style={{ background: 'var(--background)' }}>
+    <div className="flex h-screen overflow-hidden p-0" style={{ background: 'var(--background)' }}>
       <div
-        className="flex flex-1 min-w-0 overflow-hidden lg:rounded-xl"
+        className="flex flex-1 min-w-0 overflow-hidden"
         style={{ background: 'var(--app-surface)', boxShadow: 'var(--shadow-app)' }}
       >
         <Sidebar current={screen} navigate={navigate} user={user} />

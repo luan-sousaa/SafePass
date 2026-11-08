@@ -5,7 +5,7 @@ import type { Screen, User } from '../../types';
 
 export default function Sidebar({ current, navigate, user }: { current: Screen; navigate: (s: Screen) => void; user: User }) {
   return (
-    <aside className="hidden lg:flex flex-col w-60 border-r shrink-0" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
+    <aside className="hidden lg:flex flex-col w-64 border-r shrink-0" style={{ background: 'var(--card)', borderColor: 'var(--border)' }}>
       <div className="flex items-center gap-3 px-5 h-20 border-b" style={{ borderColor: 'var(--border)' }}>
         <BrandLogo />
       </div>
