@@ -1,0 +1,12 @@
+# DOMINIO vem do .env: com um domínio de verdade (ou <ip>.sslip.io) o Caddy emite o HTTPS sozinho.
+{$DOMINIO:localhost} {
+	encode gzip
+	handle /api/* {
+		reverse_proxy api:8000
+	}
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+}

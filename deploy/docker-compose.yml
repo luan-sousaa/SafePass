@@ -1,0 +1,16 @@
+services:
+  api:
+    build: { context: .., dockerfile: deploy/Dockerfile.api }
+    env_file: .env
+    volumes: [dados:/data]
+    restart: unless-stopped
+  web:
+    build: { context: .., dockerfile: deploy/Dockerfile.web }
+    env_file: .env
+    ports: ["80:80", "443:443"]
+    volumes: [caddy:/data]
+    depends_on: [api]
+    restart: unless-stopped
+volumes:
+  dados:
+  caddy:
