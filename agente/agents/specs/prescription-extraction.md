@@ -69,6 +69,9 @@ passo só) em vez de OCR tradicional + regras, que erra muito com letra manuscri
   2026-10-26): com o Gemini em 503 "high demand", cada tentativa demorava ~20 s para
   falhar, as 3 tentativas somavam ~60 s e o front abortava antes do fallback chegar. O
   orquestrador (`root_agent`) continua com o retry do client (FR-7), sem esse limite.
+  **Revisto em 2026-11-12** (spec `gemini-model-fallback.md`, FR-4/FR-5): com vários modelos
+  em `GEMINI_MODELS`, cada um tem uma tentativa e o teto de 25 s passa a ser garantido pelo
+  orçamento total `GEMINI_EXTRACTION_BUDGET_MS`; o AC-12 abaixo checa esse orçamento.
 
 ## Interface / contrato
 

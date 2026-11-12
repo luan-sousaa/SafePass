@@ -1,15 +1,18 @@
 import logging
+import time
 from typing import Optional
 
+import httpx
+from google.genai import errors as genai_errors
 from google.genai import types
 from pydantic import BaseModel, Field
 
 from config.gemini_config import (
-    DEFAULT_MODEL,
     GEMINI_EXTRACTION_ATTEMPTS,
+    GEMINI_EXTRACTION_BUDGET_MS,
     GEMINI_EXTRACTION_TIMEOUT_MS,
+    GEMINI_MODELS,
     GEMINI_RETRY_INITIAL_DELAY,
-    GEMINI_RETRY_MAX_DELAY,
     GENERATION_TEMPERATURE,
 )
 from factories.model_factory import next_api_key
@@ -42,6 +45,19 @@ class ExtractionResult(BaseModel):
     precisa_revisar: bool
     campos_revisar: list[str]
     origem: str = "gemini"
+    modelo: Optional[str] = None  # interno (log/debug): não vai para a API nem para a tool
+
+
+# spec gemini-model-fallback FR-3: só essas falhas são do modelo (fila cheia, cota, fora do
+# ar, inexistente) e justificam tentar o próximo. Auth ou JSON inválido falhariam igual.
+_MODEL_UNAVAILABLE_CODES = {404, 429, 500, 502, 503, 504}
+_MIN_ATTEMPT_MS = 1000  # FR-5: com menos que isso de orçamento, nem vale começar outra tentativa
+
+
+def _is_model_unavailable(exc: Exception) -> bool:
+    if isinstance(exc, httpx.TimeoutException):
+        return True
+    return isinstance(exc, genai_errors.APIError) and exc.code in _MODEL_UNAVAILABLE_CODES
 
 
 def extract_prescription(image_bytes: bytes, mime_type: str = "image/jpeg") -> ExtractionResult:
@@ -49,22 +65,44 @@ def extract_prescription(image_bytes: bytes, mime_type: str = "image/jpeg") -> E
     Envia a foto da receita pro Gemini e devolve os dados estruturados com score de confiança.
     Chamada direta ao modelo multimodal (sem agente ADK por trás) — só extração, nada mais.
 
-    Se a chamada à Gemini API falhar por qualquer motivo (sem rede, cota estourada em
-    todas as chaves, erro da API), cai no fallback offline via Tesseract: devolve o texto
-    bruto lido da imagem para revisão manual, sem tentar estruturar automaticamente.
+    Tenta os modelos de GEMINI_MODELS em ordem, uma vez cada, dentro de um orçamento total
+    de tempo (spec gemini-model-fallback). Troca de modelo só em falha de disponibilidade;
+    se todos falharem, se o orçamento acabar ou se o erro não for de disponibilidade, cai no
+    fallback offline via Tesseract: devolve o texto bruto para revisão manual.
     """
-    try:
-        return _extract_with_gemini(image_bytes, mime_type)
-    except Exception:
-        logger.warning("Gemini falhou; usando fallback Tesseract", exc_info=True)
-        return _extract_with_tesseract_fallback(image_bytes)
+    # FR-4: um modelo só mantém o comportamento antigo (N tentativas no mesmo modelo).
+    attempts = GEMINI_MODELS if len(GEMINI_MODELS) > 1 else GEMINI_MODELS * GEMINI_EXTRACTION_ATTEMPTS
+    deadline = time.monotonic() + GEMINI_EXTRACTION_BUDGET_MS / 1000
+
+    for i, model in enumerate(attempts):
+        if i > 0 and model == attempts[i - 1]:
+            time.sleep(GEMINI_RETRY_INITIAL_DELAY)
+
+        remaining_ms = int((deadline - time.monotonic()) * 1000)
+        if remaining_ms < _MIN_ATTEMPT_MS:
+            logger.warning("Orçamento de tempo do Gemini esgotado antes do modelo %s", model)
+            break
+
+        try:
+            result = _extract_with_gemini(image_bytes, mime_type, model, min(GEMINI_EXTRACTION_TIMEOUT_MS, remaining_ms))
+        except Exception as exc:
+            logger.warning("Gemini %s falhou", model, exc_info=True)
+            if not _is_model_unavailable(exc):
+                break
+            continue
+
+        logger.info("Receita lida pelo modelo %s", model)
+        return result
+
+    logger.info("Nenhum modelo Gemini respondeu; usando fallback Tesseract")
+    return _extract_with_tesseract_fallback(image_bytes)
 
 
-def _extract_with_gemini(image_bytes: bytes, mime_type: str) -> ExtractionResult:
+def _extract_with_gemini(image_bytes: bytes, mime_type: str, model: str, timeout_ms: int) -> ExtractionResult:
     client = build_genai_client(api_key=next_api_key())
 
     response = client.models.generate_content(
-        model=DEFAULT_MODEL,
+        model=model,
         contents=[
             types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
             EXTRACT_PRESCRIPTION_PROMPT,
@@ -73,15 +111,11 @@ def _extract_with_gemini(image_bytes: bytes, mime_type: str) -> ExtractionResult
             temperature=GENERATION_TEMPERATURE,
             response_mime_type="application/json",
             response_schema=PrescriptionExtraction,
-            # Substitui o retry do client só nesta chamada, com limite de tempo por
-            # tentativa (FR-10): sem ele, o Gemini em 503 levava ~60 s para desistir.
+            # Uma tentativa só, com tempo máximo (FR-10): quem repete ou troca de modelo é o
+            # laço de extract_prescription, que controla o orçamento total.
             http_options=types.HttpOptions(
-                timeout=GEMINI_EXTRACTION_TIMEOUT_MS,
-                retry_options=types.HttpRetryOptions(
-                    attempts=GEMINI_EXTRACTION_ATTEMPTS,
-                    initial_delay=GEMINI_RETRY_INITIAL_DELAY,
-                    max_delay=GEMINI_RETRY_MAX_DELAY,
-                ),
+                timeout=timeout_ms,
+                retry_options=types.HttpRetryOptions(attempts=1),
             ),
         ),
     )
@@ -98,6 +132,7 @@ def _extract_with_gemini(image_bytes: bytes, mime_type: str) -> ExtractionResult
         precisa_revisar=precisa_revisar,
         campos_revisar=campos_revisar,
         origem="gemini",
+        modelo=model,
     )
 
 

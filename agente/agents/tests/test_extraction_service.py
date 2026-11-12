@@ -111,14 +111,9 @@ def test_extract_prescription_falls_back_when_gemini_returns_unparseable_respons
 
 
 def test_pior_caso_do_gemini_cabe_em_25_segundos_ac12():
-    # Espera do backoff (tenacity.wait_exponential_jitter): initial * 2^(i-1) + jitter de até 1 s, limitada a max_delay.
-    esperas = sum(
-        min(gemini_config.GEMINI_RETRY_INITIAL_DELAY * 2**i + 1, gemini_config.GEMINI_RETRY_MAX_DELAY)
-        for i in range(gemini_config.GEMINI_EXTRACTION_ATTEMPTS - 1)
-    )
-    tentativas = gemini_config.GEMINI_EXTRACTION_ATTEMPTS * gemini_config.GEMINI_EXTRACTION_TIMEOUT_MS / 1000
-
-    assert tentativas + esperas <= 25
+    # Desde a spec gemini-model-fallback (FR-5) o teto é o orçamento total da cadeia de
+    # modelos; o comportamento sob carga é testado no AC-8 de test_gemini_model_fallback.py.
+    assert gemini_config.GEMINI_EXTRACTION_BUDGET_MS <= 25000
 
 
 @pytest.mark.parametrize("modo", ["lento", "503"])
