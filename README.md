@@ -303,6 +303,23 @@ Toda rota exige o header `X-Usuario-Id` (só em dev; o front manda `dev`). Sem e
 
 Testes da API: `.venv/bin/pytest` (Windows: `.venv\Scripts\pytest`), de dentro de `agente/agents/`.
 
+### Variáveis de ambiente da IA
+
+Ficam em `agente/agents/.env` (modelo em `agente/.env.example`). Nunca commite o `.env` preenchido.
+
+| Variável | Obrigatória | Padrão | Para quê |
+|---|---|---|---|
+| `GOOGLE_API_KEY` | para a leitura automática | — | Chave da Gemini API, gerada em https://aistudio.google.com/apikey |
+| `GOOGLE_API_KEYS` | não | — | Várias chaves separadas por vírgula, usadas em revezamento (no lugar da anterior) |
+| `GEMINI_MODEL` | não | `gemini-flash-latest` | Modelo usado na extração e no agente |
+| `GEMINI_TEMPERATURE` | não | `0.1` | Temperatura da geração |
+| `PRESCRIPTION_CONFIDENCE_THRESHOLD` | não | `0.9` | Abaixo disso a leitura vai para revisão manual |
+| `TESSERACT_LANG` | não | `por` | Idioma do OCR de fallback |
+| `TESSERACT_CMD` | só no Windows, se o Tesseract não estiver no PATH | — | Caminho do `tesseract.exe` |
+
+Sem chave, a API sobe normalmente e toda leitura cai no Tesseract com preenchimento manual.
+Prompts e detalhes das integrações: [`docs/integracoes-ia.md`](docs/integracoes-ia.md).
+
 ### 3. Suba o front (terminal 2)
 
 Na raiz do repositório:
